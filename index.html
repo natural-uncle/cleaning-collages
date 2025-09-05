@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>清洗前後拼貼照片分享</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-100">
+  <div class="max-w-3xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">清洗前後拼貼照片分享</h1>
+
+    <section id="editor" class="mb-8">
+      <div class="mb-3"><label>案件/地點</label><input id="title" class="border p-2 w-full" /></div>
+      <div class="mb-3"><label>服務日期</label><input id="date" type="date" class="border p-2 w-full" /></div>
+      <div class="mb-3"><label>標籤</label><input id="tags" class="border p-2 w-full" /></div>
+      <div class="mb-3"><label>自訂代稱(slug)</label><input id="slug" class="border p-2 w-full" /></div>
+      <div id="items" class="space-y-2 mb-3"></div>
+      <button id="addItem" class="bg-gray-200 px-3 py-1">＋ 新增一張</button>
+      <div class="mt-4"><button id="upload" class="bg-blue-600 text-white px-4 py-2">上傳全部並產生連結</button><span id="progress" class="ml-2 text-sm"></span></div>
+    </section>
+
+    <section id="viewer" class="hidden">
+      <h2 id="v-title" class="text-xl font-semibold mb-2"></h2>
+      <p id="v-date"></p>
+      <div id="v-tags" class="flex gap-2 mt-2 mb-4"></div>
+      <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      <div class="mt-4 text-xs text-gray-500" id="v-id"></div>
+
+      <!-- 公司資訊區塊 -->
+      <div class="p-5 border-t border-slate-200/60 dark:border-slate-700 text-center">
+        <img src="logo.jpg" alt="公司Logo" class="mx-auto mb-3 max-h-24" />
+        <p class="text-sm font-semibold">自然大叔 Natural Uncle 專業清淨職人</p>
+        <p class="text-sm mt-1">聯絡電話：<a href="tel:0912356331" class="text-blue-600">0912-356-331</a></p>
+      </div>
+    </section>
+  </div>
+
+<script>
+function slugify(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');}
+function setProgress(m){document.getElementById('progress').textContent=m||'';}
+function addItemRow(){const row=document.createElement('div');row.className="flex gap-2";row.innerHTML='<input type="file" accept="image/*" class="border p-2 flex-1"/><input type="text" placeholder="說明" class="border p-2 flex-1"/><button class="remove bg-red-500 text-white px-2">刪除</button>';row.querySelector('.remove').addEventListener('click',()=>row.remove());document.getElementById('items').appendChild(row);}document.getElementById('addItem').addEventListener('click',addItemRow);addItemRow();
+const CLOUD_NAME="dijzndzw2";const UPLOAD_PRESET="unsigned_collages";
+async function uploadToCloudinary(file,folder){const fd=new FormData();fd.append("file",file);fd.append("upload_preset",UPLOAD_PRESET);fd.append("folder",folder);const resp=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,{method:"POST",body:fd});const j=await resp.json();if(!resp.ok||!j.secure_url){throw new Error(j.error?.message||"cloudinary upload failed");}return j.secure_url;}
+document.getElementById('upload').addEventListener('click',async()=>{const title=document.getElementById('title').value.trim();const date=document.getElementById('date').value;const tags=document.getElementById('tags').value.trim();let slug=document.getElementById('slug').value.trim();const rows=Array.from(document.querySelectorAll('#items>div'));if(!rows.length)return alert('請至少新增一張');if(!slug)slug=slugify((title||'case')+'-'+Date.now().toString().slice(-6));try{setProgress('上傳中…');const folder=`collages/${slug}`;const items=[];for(const row of rows){const f=row.querySelector('input[type=file]').files[0];const caption=row.querySelector('input[type=text]').value.trim();if(!f)return alert('有一列未選圖片');if(f.size>10*1024*1024)return alert('有圖片超過 10MB');const url=await uploadToCloudinary(f,folder);items.push({url,caption});}setProgress('儲存 JSON…');const resp=await fetch('/.netlify/functions/create-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,date,tags,slug,items})});const text=await resp.text();let data;try{data=JSON.parse(text);}catch{data={error:text};}if(!resp.ok||!data.ok)throw new Error(data.error||'建立失敗');location.hash='#/v/'+encodeURIComponent(data.slug);}catch(e){setProgress('');alert('建立失敗：'+(e.message||e));}});
+async function loadPost(slug){try{const r=await fetch('/.netlify/functions/get-post?slug='+encodeURIComponent(slug));const t=await r.text();let d;try{d=JSON.parse(t);}catch{throw new Error(t);}if(d.error)throw new Error(d.error);document.getElementById('editor').classList.add('hidden');document.getElementById('viewer').classList.remove('hidden');document.getElementById('v-title').textContent=d.title||'';document.getElementById('v-date').textContent=d.date||'';document.getElementById('v-id').textContent='Slug:'+d.slug;const tagsBox=document.getElementById('v-tags');tagsBox.innerHTML='';(d.tags||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(t=>{const s=document.createElement('span');s.textContent='#'+t;tagsBox.appendChild(s);});const g=document.getElementById('gallery');g.innerHTML='';(d.items||[]).forEach(it=>{const div=document.createElement('div');div.innerHTML=`<img src="${it.url}" class="w-full"/><div>${it.caption||''}</div>`;g.appendChild(div);});}catch(e){alert('讀取失敗：'+(e.message||e));}}
+function route(){const h=location.hash;if(h.startsWith('#/v/')){loadPost(decodeURIComponent(h.replace('#/v/','')));}}
+window.addEventListener('hashchange',route);route();
+</script>
+</body>
+</html>
