@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>清洗前後拼貼照片分享（Netlify + Cloudinary）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    .card { @apply bg-white/70 dark:bg-slate-800/70 backdrop-blur rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700; }
+    .btn { @apply inline-flex items-center justify-center px-4 py-2 rounded-2xl font-medium shadow-sm border border-slate-300 dark:border-slate-600 hover:shadow transition; }
+    .btn-primary { @apply bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent; }
+    .input { @apply w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3 py-2 bg-white/70 dark:bg-slate-900/40; }
+    .tag { @apply text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+  <div class="max-w-3xl mx-auto p-6 md:p-10">
+    <header class="flex items-center gap-3 mb-6">
+      <div class="p-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900">
+        <svg id="logo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/></svg>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold">清洗前後拼貼照片分享</h1>
+        <p class="text-sm text-slate-600 dark:text-slate-300">GitHub + Netlify（Functions & Blobs）+ Cloudinary 上傳</p>
+      </div>
+      <div class="ml-auto flex items-center gap-2 text-xs">
+        <span class="tag bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" id="env-status">Netlify Functions</span>
+        <button class="btn" id="toggle-theme" title="切換主題">🌓</button>
+      </div>
+    </header>
+
+    <section id="editor" class="card p-5 hidden">
+      <div class="space-y-4">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm mb-1">案件/地點（例如：台北王小姐）</label>
+            <input id="title" type="text" class="input" placeholder="輸入案件名稱" />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">服務日期</label>
+            <input id="date" type="date" class="input" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm mb-2">照片清單（可新增多張，每張可填說明）</label>
+          <div id="items" class="space-y-3"></div>
+          <button id="addItem" class="btn mt-2">＋ 新增一張</button>
+          <p class="text-xs text-slate-500 mt-1">每張支援 JPG/PNG，單檔 ≤ 10MB。</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm mb-1">對外顯示標籤（選填）</label>
+            <input id="tags" type="text" class="input" placeholder="以逗號分隔，例如：冷氣, 住家" />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">自訂網址代稱（選填）</label>
+            <input id="slug" type="text" class="input" placeholder="例如：wang-room-2025-09" />
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button id="upload" class="btn btn-primary">上傳全部並產生連結</button>
+          <span id="progress" class="text-sm text-slate-600 dark:text-slate-300"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="viewer" class="hidden">
+      <article class="card overflow-hidden">
+        <div class="p-5 border-b border-slate-200/60 dark:border-slate-700">
+          <div class="flex items-start gap-3">
+            <div class="grow">
+              <h2 id="v-title" class="text-xl font-semibold"></h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                <span id="v-date"></span>
+              </p>
+              <div id="v-tags" class="flex flex-wrap gap-2 mt-2"></div>
+            </div>
+            <a id="downloadZip" class="btn" target="_blank" rel="noopener">下載全部（ZIP）</a>
+          </div>
+        </div>
+        <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5"></div>
+        <div class="p-5 text-xs text-slate-500 flex items-center justify-between">
+          <span>由 <strong id="site-name">清洗前後拼貼照片分享</strong> 生成</span>
+          <span id="v-id"></span>
+        </div>
+      </article>
+    </section>
+
+    <footer class="text-center text-xs text-slate-500 mt-8">
+      <p>此版本使用 Netlify Functions + Cloudinary + Netlify Blobs，直接部署在 Netlify。</p>
+    </footer>
+  </div>
+
+  <script>
+    // 主題切換
+    const root = document.documentElement;
+    document.getElementById('toggle-theme').addEventListener('click', () => {
+      root.classList.toggle('dark');
+      localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
+    });
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.classList.add('dark');
+    }
+
+    // 路由：/#/new 建立、/#/v/:slug 檢視
+    const editor = document.getElementById('editor');
+    const viewer = document.getElementById('viewer');
+
+    function route() {
+      const hash = location.hash || '#/new';
+      if (hash.startsWith('#/v/')) {
+        editor.classList.add('hidden');
+        viewer.classList.remove('hidden');
+        const slug = decodeURIComponent(hash.replace('#/v/', ''));
+        loadPost(slug);
+      } else {
+        viewer.classList.add('hidden');
+        editor.classList.remove('hidden');
+      }
+    }
+    window.addEventListener('hashchange', route);
+
+    // 將 File 轉 base64（簡化）
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const s = String(r.result);
+          const comma = s.indexOf(',');
+          resolve(comma >= 0 ? s.slice(comma + 1) : s);
+        };
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    // 建立一個照片欄位
+    function addItemRow() {
+      const id = 'i_' + Math.random().toString(36).slice(2);
+      const row = document.createElement('div');
+      row.className = 'grid md:grid-cols-3 gap-3 items-start';
+      row.innerHTML = `
+        <input type="file" accept="image/*" class="input" id="${id}_file" />
+        <input type="text" class="input" id="${id}_caption" placeholder="照片說明（例如：房間冷氣）" />
+        <div class="flex gap-2">
+          <button class="btn" id="${id}_previewBtn">預覽</button>
+          <button class="btn" id="${id}_removeBtn">刪除</button>
+        </div>`;
+      document.getElementById('items').appendChild(row);
+      row.querySelector(\`#\${id}_removeBtn\`).addEventListener('click', () => row.remove());
+      row.querySelector(\`#\${id}_previewBtn\`).addEventListener('click', async () => {
+        const f = row.querySelector(\`#\${id}_file\`).files[0];
+        if (!f) return toast('請先選擇圖片');
+        const b64 = await fileToBase64(f);
+        const w = window.open();
+        w.document.write(\`<img src="data:image/*;base64,\${b64}" style="max-width:100%"/>\`);
+      });
+    }
+
+    // 初始化：先放一列
+    document.getElementById('addItem').addEventListener('click', addItemRow);
+    addItemRow();
+
+    // 簡單 slugify
+    function slugify(str) {
+      const lower = String(str).toLowerCase();
+      let out = '';
+      for (let i = 0; i < lower.length; i++) {
+        const ch = lower[i];
+        const isAZ = ch >= 'a' && ch <= 'z';
+        const is09 = ch >= '0' && ch <= '9';
+        if (isAZ || is09) {
+          out += ch;
+        } else if (out[out.length - 1] !== '-') {
+          out += '-';
+        }
+      }
+      while (out.startsWith('-')) out = out.slice(1);
+      while (out.endsWith('-')) out = out.slice(0, -1);
+      return out;
+    }
+
+    // 建立貼文：呼叫 Netlify Function（多張）
+    document.getElementById('upload')?.addEventListener('click', async () => {
+      const title = document.getElementById('title').value.trim();
+      const date = document.getElementById('date').value;
+      const tags = document.getElementById('tags').value.trim();
+      let slug = document.getElementById('slug').value.trim();
+
+      const rows = Array.from(document.querySelectorAll('#items > div'));
+      if (!rows.length) return toast('請至少新增一張照片');
+
+      const items = [];
+      for (const row of rows) {
+        const f = row.querySelector('input[type=file]').files[0];
+        const caption = row.querySelector('input[type=text]').value.trim();
+        if (!f) return toast('有一列未選擇圖片');
+        if (f.size > 10 * 1024 * 1024) return toast('有圖片超過 10 MB');
+        items.push({ filename: f.name, caption, fileBase64: await fileToBase64(f) });
+      }
+
+      if (!slug) slug = slugify(\`\${title || 'case'}-\${Date.now().toString().slice(-6)}\`);
+      const valid = /^[a-z0-9-]{3,}$/.test(slug);
+      if (!valid) return toast('自訂網址代稱僅能使用小寫英數與短橫，至少 3 碼');
+
+      try {
+        setProgress('上傳並建立中…');
+        const res = await fetch('/.netlify/functions/create-post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, date, tags, slug, items })
+        }).then(r => r.json());
+
+        if (!res.ok) throw new Error(res.error || 'unknown');
+
+        const shareUrl = location.origin + location.pathname + '#/v/' + encodeURIComponent(res.slug);
+        await navigator.clipboard?.writeText(shareUrl).catch(()=>{});
+        setProgress('完成！已複製連結');
+        location.hash = '#/v/' + encodeURIComponent(res.slug);
+      } catch (e) {
+        setProgress('');
+        toast('建立失敗：' + e.message);
+      }
+    });
+
+    // 檢視頁讀取：從 Netlify Function 取資料
+    async function loadPost(slug) {
+      try {
+        setProgress('讀取中…');
+        const data = await fetch('/.netlify/functions/get-post?slug=' + encodeURIComponent(slug))
+          .then(r => r.json());
+        if (data.error) throw new Error(data.error);
+        document.getElementById('v-title').textContent = data.title || '未命名案件';
+        document.getElementById('v-date').textContent = data.date ? new Date(data.date).toLocaleDateString() : '';
+        document.getElementById('v-id').textContent = 'Slug: ' + data.slug;
+        const tagsBox = document.getElementById('v-tags');
+        tagsBox.innerHTML = '';
+        (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).forEach(t => {
+          const span = document.createElement('span');
+          span.className = 'tag';
+          span.textContent = '#' + t;
+          tagsBox.appendChild(span);
+        });
+        const g = document.getElementById('gallery');
+        g.innerHTML = '';
+        (data.items || []).forEach((it, idx) => {
+          const card = document.createElement('div');
+          card.className = 'card p-3';
+          card.innerHTML = `
+            <img src="${it.url}" class="w-full object-contain max-h-[60vh] bg-slate-50 dark:bg-slate-900 rounded-xl"/>
+            <div class="mt-2 text-sm text-slate-700 dark:text-slate-300">${it.caption ? it.caption : \`照片 \${idx+1}\`}</div>`;
+          g.appendChild(card);
+        });
+        document.getElementById('downloadZip').href = (data.zip_url || (data.items?.[0]?.url ?? '#'));
+        setProgress('');
+        document.title = `${data.title || ''}｜清洗前後拼貼`;
+      } catch (e) {
+        setProgress('找不到此頁：' + e.message);
+      }
+    }
+
+    function toast(msg) { alert(msg); }
+    function setProgress(msg) { const el = document.getElementById('progress'); if (el) el.textContent = msg || ''; }
+
+    route();
+  </script>
+
+  <!--
+  =============================
+  Netlify Functions 範例檔案（請在專案中新增對應檔案）
+  =============================
+
+  1) netlify/functions/create-post.js
+  -----------------------------------
+  import { v2 as cloudinary } from 'cloudinary';
+  import { getStore } from '@netlify/blobs';
+
+  cloudinary.config({
+    cloud_name: process.env.CLD_CLOUD_NAME,
+    api_key:    process.env.CLD_API_KEY,
+    api_secret: process.env.CLD_API_SECRET,
+  });
+
+  const store = getStore({ name: 'posts' });
+
+  export default async (req, res) => {
+    try {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const body = JSON.parse(req.body || '{}');
+      const { title = '', date = null, tags = '', slug: slugIn, items = [] } = body;
+      if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'items required' });
+
+      let slug = (slugIn || `${Date.now()}`).toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+      if (slug.length < 3) slug = slug + '-xx';
+
+      const uploaded = [];
+      for (const it of items) {
+        if (!it.fileBase64) return res.status(400).json({ error: 'fileBase64 missing in item' });
+        const up = await cloudinary.uploader.upload(\`data:image/*;base64,\${it.fileBase64}\`, {
+          folder: \`collages/\${slug}\`,
+          overwrite: true,
+        });
+        uploaded.push({ public_id: up.public_id, url: up.secure_url, caption: it.caption || '' });
+      }
+
+      const record = { slug, title, date, tags, items: uploaded, created_at: new Date().toISOString() };
+      await store.set(slug, JSON.stringify(record));
+
+      return res.status(200).json({ ok: true, slug, shareUrl: \`#/v/\${encodeURIComponent(slug)}\` });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  2) netlify/functions/get-post.js
+  --------------------------------
+  import { getStore } from '@netlify/blobs';
+  const store = getStore({ name: 'posts' });
+
+  export default async (req, res) => {
+    try {
+      const { slug } = req.query || {};
+      if (!slug) return res.status(400).json({ error: 'slug required' });
+      const json = await store.get(slug, { type: 'json' });
+      if (!json) return res.status(404).json({ error: 'not found' });
+      return res.status(200).json(json);
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  必要環境變數：CLD_CLOUD_NAME、CLD_API_KEY、CLD_API_SECRET
+  套件：cloudinary、@netlify/blobs
+  -->
+</body>
+</html>
