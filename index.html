@@ -30,7 +30,8 @@
       </div>
     </header>
 
-    <section id="editor" class="card p-5 hidden">
+    <!-- 讓 editor 預設可見，避免 JS 出錯時整頁空白 -->
+    <section id="editor" class="card p-5">
       <div class="space-y-4">
         <div class="grid md:grid-cols-2 gap-4">
           <div>
@@ -66,6 +67,7 @@
           <span id="progress" class="text-sm text-slate-600 dark:text-slate-300"></span>
         </div>
       </div>
+      <noscript class="block mt-3 text-sm text-red-600">你的瀏覽器停用了 JavaScript，請啟用後再試。</noscript>
     </section>
 
     <section id="viewer" class="hidden">
@@ -96,245 +98,170 @@
   </div>
 
   <script>
-    // 主題切換
-    const root = document.documentElement;
-    document.getElementById('toggle-theme').addEventListener('click', () => {
-      root.classList.toggle('dark');
-      localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
-    });
-    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      root.classList.add('dark');
-    }
-
-    // 路由：/#/new 建立、/#/v/:slug 檢視
-    const editor = document.getElementById('editor');
-    const viewer = document.getElementById('viewer');
-
-    function route() {
-      const hash = location.hash || '#/new';
-      if (hash.startsWith('#/v/')) {
-        editor.classList.add('hidden');
-        viewer.classList.remove('hidden');
-        const slug = decodeURIComponent(hash.replace('#/v/', ''));
-        loadPost(slug);
-      } else {
-        viewer.classList.add('hidden');
-        editor.classList.remove('hidden');
+    try {
+      const root = document.documentElement;
+      document.getElementById('toggle-theme')?.addEventListener('click', () => {
+        root.classList.toggle('dark');
+        localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
+      });
+      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        root.classList.add('dark');
       }
-    }
-    window.addEventListener('hashchange', route);
 
-    // 將 File 轉 base64（簡化）
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => {
-          const s = String(r.result);
-          const comma = s.indexOf(',');
-          resolve(comma >= 0 ? s.slice(comma + 1) : s);
-        };
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-    }
+      const editor = document.getElementById('editor');
+      const viewer = document.getElementById('viewer');
 
-    // 建立一個照片欄位
-    function addItemRow() {
-      const id = 'i_' + Math.random().toString(36).slice(2);
-      const row = document.createElement('div');
-      row.className = 'grid md:grid-cols-3 gap-3 items-start';
-      row.innerHTML = `
-        <input type="file" accept="image/*" class="input" id="${id}_file" />
-        <input type="text" class="input" id="${id}_caption" placeholder="照片說明（例如：房間冷氣）" />
-        <div class="flex gap-2">
-          <button class="btn" id="${id}_previewBtn">預覽</button>
-          <button class="btn" id="${id}_removeBtn">刪除</button>
-        </div>`;
-      document.getElementById('items').appendChild(row);
-      row.querySelector(\`#\${id}_removeBtn\`).addEventListener('click', () => row.remove());
-      row.querySelector(\`#\${id}_previewBtn\`).addEventListener('click', async () => {
-        const f = row.querySelector(\`#\${id}_file\`).files[0];
-        if (!f) return toast('請先選擇圖片');
-        const b64 = await fileToBase64(f);
-        const w = window.open();
-        w.document.write(\`<img src="data:image/*;base64,\${b64}" style="max-width:100%"/>\`);
-      });
-    }
-
-    // 初始化：先放一列
-    document.getElementById('addItem').addEventListener('click', addItemRow);
-    addItemRow();
-
-    // 簡單 slugify
-    function slugify(str) {
-      const lower = String(str).toLowerCase();
-      let out = '';
-      for (let i = 0; i < lower.length; i++) {
-        const ch = lower[i];
-        const isAZ = ch >= 'a' && ch <= 'z';
-        const is09 = ch >= '0' && ch <= '9';
-        if (isAZ || is09) {
-          out += ch;
-        } else if (out[out.length - 1] !== '-') {
-          out += '-';
+      function route() {
+        const hash = location.hash || '#/new';
+        if (hash.startsWith('#/v/')) {
+          editor?.classList.add('hidden');
+          viewer?.classList.remove('hidden');
+          const slug = decodeURIComponent(hash.replace('#/v/', ''));
+          loadPost(slug);
+        } else {
+          viewer?.classList.add('hidden');
+          editor?.classList.remove('hidden');
         }
       }
-      while (out.startsWith('-')) out = out.slice(1);
-      while (out.endsWith('-')) out = out.slice(0, -1);
-      return out;
-    }
+      window.addEventListener('hashchange', route);
 
-    // 建立貼文：呼叫 Netlify Function（多張）
-    document.getElementById('upload')?.addEventListener('click', async () => {
-      const title = document.getElementById('title').value.trim();
-      const date = document.getElementById('date').value;
-      const tags = document.getElementById('tags').value.trim();
-      let slug = document.getElementById('slug').value.trim();
-
-      const rows = Array.from(document.querySelectorAll('#items > div'));
-      if (!rows.length) return toast('請至少新增一張照片');
-
-      const items = [];
-      for (const row of rows) {
-        const f = row.querySelector('input[type=file]').files[0];
-        const caption = row.querySelector('input[type=text]').value.trim();
-        if (!f) return toast('有一列未選擇圖片');
-        if (f.size > 10 * 1024 * 1024) return toast('有圖片超過 10 MB');
-        items.push({ filename: f.name, caption, fileBase64: await fileToBase64(f) });
-      }
-
-      if (!slug) slug = slugify(\`\${title || 'case'}-\${Date.now().toString().slice(-6)}\`);
-      const valid = /^[a-z0-9-]{3,}$/.test(slug);
-      if (!valid) return toast('自訂網址代稱僅能使用小寫英數與短橫，至少 3 碼');
-
-      try {
-        setProgress('上傳並建立中…');
-        const res = await fetch('/.netlify/functions/create-post', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, date, tags, slug, items })
-        }).then(r => r.json());
-
-        if (!res.ok) throw new Error(res.error || 'unknown');
-
-        const shareUrl = location.origin + location.pathname + '#/v/' + encodeURIComponent(res.slug);
-        await navigator.clipboard?.writeText(shareUrl).catch(()=>{});
-        setProgress('完成！已複製連結');
-        location.hash = '#/v/' + encodeURIComponent(res.slug);
-      } catch (e) {
-        setProgress('');
-        toast('建立失敗：' + e.message);
-      }
-    });
-
-    // 檢視頁讀取：從 Netlify Function 取資料
-    async function loadPost(slug) {
-      try {
-        setProgress('讀取中…');
-        const data = await fetch('/.netlify/functions/get-post?slug=' + encodeURIComponent(slug))
-          .then(r => r.json());
-        if (data.error) throw new Error(data.error);
-        document.getElementById('v-title').textContent = data.title || '未命名案件';
-        document.getElementById('v-date').textContent = data.date ? new Date(data.date).toLocaleDateString() : '';
-        document.getElementById('v-id').textContent = 'Slug: ' + data.slug;
-        const tagsBox = document.getElementById('v-tags');
-        tagsBox.innerHTML = '';
-        (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).forEach(t => {
-          const span = document.createElement('span');
-          span.className = 'tag';
-          span.textContent = '#' + t;
-          tagsBox.appendChild(span);
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => {
+            const s = String(r.result);
+            const comma = s.indexOf(',');
+            resolve(comma >= 0 ? s.slice(comma + 1) : s);
+          };
+          r.onerror = reject;
+          r.readAsDataURL(file);
         });
-        const g = document.getElementById('gallery');
-        g.innerHTML = '';
-        (data.items || []).forEach((it, idx) => {
-          const card = document.createElement('div');
-          card.className = 'card p-3';
-          card.innerHTML = `
-            <img src="${it.url}" class="w-full object-contain max-h-[60vh] bg-slate-50 dark:bg-slate-900 rounded-xl"/>
-            <div class="mt-2 text-sm text-slate-700 dark:text-slate-300">${it.caption ? it.caption : \`照片 \${idx+1}\`}</div>`;
-          g.appendChild(card);
-        });
-        document.getElementById('downloadZip').href = (data.zip_url || (data.items?.[0]?.url ?? '#'));
-        setProgress('');
-        document.title = `${data.title || ''}｜清洗前後拼貼`;
-      } catch (e) {
-        setProgress('找不到此頁：' + e.message);
       }
+
+      function addItemRow() {
+        const id = 'i_' + Math.random().toString(36).slice(2);
+        const row = document.createElement('div');
+        row.className = 'grid md:grid-cols-3 gap-3 items-start';
+        row.innerHTML = `
+          <input type="file" accept="image/*" class="input" id="${id}_file" />
+          <input type="text" class="input" id="${id}_caption" placeholder="照片說明（例如：房間冷氣）" />
+          <div class="flex gap-2">
+            <button class="btn" id="${id}_previewBtn">預覽</button>
+            <button class="btn" id="${id}_removeBtn">刪除</button>
+          </div>`;
+        document.getElementById('items')?.appendChild(row);
+        row.querySelector(\`#\${id}_removeBtn\`)?.addEventListener('click', () => row.remove());
+        row.querySelector(\`#\${id}_previewBtn\`)?.addEventListener('click', async () => {
+          const f = row.querySelector(\`#\${id}_file\`)?.files?.[0];
+          if (!f) return alert('請先選擇圖片');
+          const b64 = await fileToBase64(f);
+          const w = window.open();
+          w.document.write(\`<img src="data:image/*;base64,\${b64}" style="max-width:100%"/>\`);
+        });
+      }
+
+      document.getElementById('addItem')?.addEventListener('click', addItemRow);
+      addItemRow();
+
+      function slugify(str) {
+        const lower = String(str).toLowerCase();
+        let out = '';
+        for (let i = 0; i < lower.length; i++) {
+          const ch = lower[i];
+          const isAZ = ch >= 'a' && ch <= 'z';
+          const is09 = ch >= '0' && ch <= '9';
+          if (isAZ || is09) {
+            out += ch;
+          } else if (out[out.length - 1] !== '-') {
+            out += '-';
+          }
+        }
+        while (out.startsWith('-')) out = out.slice(1);
+        while (out.endsWith('-')) out = out.slice(0, -1);
+        return out;
+      }
+
+      document.getElementById('upload')?.addEventListener('click', async () => {
+        const title = document.getElementById('title')?.value?.trim() || '';
+        const date = document.getElementById('date')?.value || '';
+        const tags = document.getElementById('tags')?.value?.trim() || '';
+        let slug = document.getElementById('slug')?.value?.trim() || '';
+
+        const rows = Array.from(document.querySelectorAll('#items > div'));
+        if (!rows.length) return alert('請至少新增一張照片');
+
+        const items = [];
+        for (const row of rows) {
+          const f = row.querySelector('input[type=file]')?.files?.[0];
+          const caption = row.querySelector('input[type=text]')?.value?.trim() || '';
+          if (!f) return alert('有一列未選擇圖片');
+          if (f.size > 10 * 1024 * 1024) return alert('有圖片超過 10 MB');
+          items.push({ filename: f.name, caption, fileBase64: await fileToBase64(f) });
+        }
+
+        if (!slug) slug = slugify(`${title || 'case'}-${Date.now().toString().slice(-6)}`);
+        const valid = /^[a-z0-9-]{3,}$/.test(slug);
+        if (!valid) return alert('自訂網址代稱僅能使用小寫英數與短橫，至少 3 碼');
+
+        try {
+          document.getElementById('progress').textContent = '上傳並建立中…';
+          const res = await fetch('/.netlify/functions/create-post', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, date, tags, slug, items })
+          }).then(r => r.json());
+
+          if (!res.ok) throw new Error(res.error || 'unknown');
+
+          const shareUrl = location.origin + location.pathname + '#/v/' + encodeURIComponent(res.slug);
+          await navigator.clipboard?.writeText(shareUrl).catch(()=>{});
+          document.getElementById('progress').textContent = '完成！已複製連結';
+          location.hash = '#/v/' + encodeURIComponent(res.slug);
+        } catch (e) {
+          document.getElementById('progress').textContent = '';
+          alert('建立失敗：' + e.message);
+        }
+      });
+
+      async function loadPost(slug) {
+        try {
+          document.getElementById('progress').textContent = '讀取中…';
+          const data = await fetch('/.netlify/functions/get-post?slug=' + encodeURIComponent(slug)).then(r => r.json());
+          if (data.error) throw new Error(data.error);
+          document.getElementById('v-title').textContent = data.title || '未命名案件';
+          document.getElementById('v-date').textContent = data.date ? new Date(data.date).toLocaleDateString() : '';
+          document.getElementById('v-id').textContent = 'Slug: ' + data.slug;
+          const tagsBox = document.getElementById('v-tags');
+          tagsBox.innerHTML = '';
+          (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).forEach(t => {
+            const span = document.createElement('span');
+            span.className = 'tag';
+            span.textContent = '#' + t;
+            tagsBox.appendChild(span);
+          });
+          const g = document.getElementById('gallery');
+          g.innerHTML = '';
+          (data.items || []).forEach((it, idx) => {
+            const card = document.createElement('div');
+            card.className = 'card p-3';
+            card.innerHTML = `
+              <img src="${it.url}" class="w-full object-contain max-h-[60vh] bg-slate-50 dark:bg-slate-900 rounded-xl"/>
+              <div class="mt-2 text-sm text-slate-700 dark:text-slate-300">${it.caption ? it.caption : \`照片 \${idx+1}\`}</div>`;
+            g.appendChild(card);
+          });
+          document.getElementById('downloadZip').href = (data.zip_url || (data.items?.[0]?.url ?? '#'));
+          document.getElementById('progress').textContent = '';
+          document.title = `${data.title || ''}｜清洗前後拼貼`;
+        } catch (e) {
+          document.getElementById('progress').textContent = '找不到此頁：' + e.message;
+        }
+      }
+
+      // 嘗試執行路由；若失敗，至少 editor 仍可見
+      try { route(); } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error('初始化錯誤：', e);
     }
-
-    function toast(msg) { alert(msg); }
-    function setProgress(msg) { const el = document.getElementById('progress'); if (el) el.textContent = msg || ''; }
-
-    route();
   </script>
-
-  <!--
-  =============================
-  Netlify Functions 範例檔案（請在專案中新增對應檔案）
-  =============================
-
-  1) netlify/functions/create-post.js
-  -----------------------------------
-  import { v2 as cloudinary } from 'cloudinary';
-  import { getStore } from '@netlify/blobs';
-
-  cloudinary.config({
-    cloud_name: process.env.CLD_CLOUD_NAME,
-    api_key:    process.env.CLD_API_KEY,
-    api_secret: process.env.CLD_API_SECRET,
-  });
-
-  const store = getStore({ name: 'posts' });
-
-  export default async (req, res) => {
-    try {
-      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-      const body = JSON.parse(req.body || '{}');
-      const { title = '', date = null, tags = '', slug: slugIn, items = [] } = body;
-      if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'items required' });
-
-      let slug = (slugIn || `${Date.now()}`).toLowerCase().replace(/[^a-z0-9-]+/g, '-');
-      if (slug.length < 3) slug = slug + '-xx';
-
-      const uploaded = [];
-      for (const it of items) {
-        if (!it.fileBase64) return res.status(400).json({ error: 'fileBase64 missing in item' });
-        const up = await cloudinary.uploader.upload(\`data:image/*;base64,\${it.fileBase64}\`, {
-          folder: \`collages/\${slug}\`,
-          overwrite: true,
-        });
-        uploaded.push({ public_id: up.public_id, url: up.secure_url, caption: it.caption || '' });
-      }
-
-      const record = { slug, title, date, tags, items: uploaded, created_at: new Date().toISOString() };
-      await store.set(slug, JSON.stringify(record));
-
-      return res.status(200).json({ ok: true, slug, shareUrl: \`#/v/\${encodeURIComponent(slug)}\` });
-    } catch (e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-
-  2) netlify/functions/get-post.js
-  --------------------------------
-  import { getStore } from '@netlify/blobs';
-  const store = getStore({ name: 'posts' });
-
-  export default async (req, res) => {
-    try {
-      const { slug } = req.query || {};
-      if (!slug) return res.status(400).json({ error: 'slug required' });
-      const json = await store.get(slug, { type: 'json' });
-      if (!json) return res.status(404).json({ error: 'not found' });
-      return res.status(200).json(json);
-    } catch (e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-
-  必要環境變數：CLD_CLOUD_NAME、CLD_API_KEY、CLD_API_SECRET
-  套件：cloudinary、@netlify/blobs
-  -->
 </body>
 </html>
