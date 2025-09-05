@@ -3,15 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>清洗前後拼貼照片分享（Netlify + Cloudinary）</title>
+  <title>清洗前後拼貼照片分享（Patched）</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { color-scheme: light dark; }
-    .card { @apply bg-white/70 dark:bg-slate-800/70 backdrop-blur rounded-2xl shadow-lg border border-slate-200/60 dark:border-slate-700; }
-    .btn { @apply inline-flex items-center justify-center px-4 py-2 rounded-2xl font-medium shadow-sm border border-slate-300 dark:border-slate-600 hover:shadow transition; }
-    .btn-primary { @apply bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent; }
-    .input { @apply w-full rounded-xl border border-slate-300 dark:border-slate-600 px-3 py-2 bg-white/70 dark:bg-slate-900/40; }
-    .tag { @apply text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300; }
+    .card { background-color: rgba(255,255,255,0.7); border-radius: 1rem; border: 1px solid rgba(100,116,139,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
+    @media (prefers-color-scheme: dark) {
+      .card { background-color: rgba(30,41,59,0.7); border-color: rgba(71,85,105,0.8); }
+    }
+    .btn { display:inline-flex; align-items:center; justify-content:center; padding:0.5rem 1rem; border-radius: 1rem; border:1px solid rgba(100,116,139,0.6); }
+    .btn-primary { background:#0f172a; color:#fff; border-color:transparent; }
+    .input { width:100%; border-radius:0.75rem; border:1px solid rgba(100,116,139,0.6); padding:0.5rem 0.75rem; background:rgba(255,255,255,0.7); }
+    @media (prefers-color-scheme: dark) { .input { background: rgba(2,6,23,0.4); } }
+    .tag { font-size:12px; padding:2px 8px; border-radius:9999px; background:#eef2ff; color:#334155; }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
@@ -25,12 +29,12 @@
         <p class="text-sm text-slate-600 dark:text-slate-300">GitHub + Netlify（Functions & Blobs）+ Cloudinary 上傳</p>
       </div>
       <div class="ml-auto flex items-center gap-2 text-xs">
-        <span class="tag bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" id="env-status">Netlify Functions</span>
+        <span class="tag" id="env-status">Netlify Functions</span>
         <button class="btn" id="toggle-theme" title="切換主題">🌓</button>
       </div>
     </header>
 
-    <!-- 讓 editor 預設可見，避免 JS 出錯時整頁空白 -->
+    <!-- 讓 Editor 一開始就顯示，避免 JS 載入失敗時看起來是空白 -->
     <section id="editor" class="card p-5">
       <div class="space-y-4">
         <div class="grid md:grid-cols-2 gap-4">
@@ -67,7 +71,6 @@
           <span id="progress" class="text-sm text-slate-600 dark:text-slate-300"></span>
         </div>
       </div>
-      <noscript class="block mt-3 text-sm text-red-600">你的瀏覽器停用了 JavaScript，請啟用後再試。</noscript>
     </section>
 
     <section id="viewer" class="hidden">
@@ -98,170 +101,165 @@
   </div>
 
   <script>
-    try {
-      const root = document.documentElement;
-      document.getElementById('toggle-theme')?.addEventListener('click', () => {
-        root.classList.toggle('dark');
-        localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
-      });
-      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        root.classList.add('dark');
-      }
+  document.addEventListener('DOMContentLoaded', () => {
+    const root = document.documentElement;
+    const editor = document.getElementById('editor');
+    const viewer = document.getElementById('viewer');
+    const addItemBtn = document.getElementById('addItem');
+    const uploadBtn = document.getElementById('upload');
 
-      const editor = document.getElementById('editor');
-      const viewer = document.getElementById('viewer');
-
-      function route() {
-        const hash = location.hash || '#/new';
-        if (hash.startsWith('#/v/')) {
-          editor?.classList.add('hidden');
-          viewer?.classList.remove('hidden');
-          const slug = decodeURIComponent(hash.replace('#/v/', ''));
-          loadPost(slug);
-        } else {
-          viewer?.classList.add('hidden');
-          editor?.classList.remove('hidden');
-        }
-      }
-      window.addEventListener('hashchange', route);
-
-      function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-          const r = new FileReader();
-          r.onload = () => {
-            const s = String(r.result);
-            const comma = s.indexOf(',');
-            resolve(comma >= 0 ? s.slice(comma + 1) : s);
-          };
-          r.onerror = reject;
-          r.readAsDataURL(file);
-        });
-      }
-
-      function addItemRow() {
-        const id = 'i_' + Math.random().toString(36).slice(2);
-        const row = document.createElement('div');
-        row.className = 'grid md:grid-cols-3 gap-3 items-start';
-        row.innerHTML = `
-          <input type="file" accept="image/*" class="input" id="${id}_file" />
-          <input type="text" class="input" id="${id}_caption" placeholder="照片說明（例如：房間冷氣）" />
-          <div class="flex gap-2">
-            <button class="btn" id="${id}_previewBtn">預覽</button>
-            <button class="btn" id="${id}_removeBtn">刪除</button>
-          </div>`;
-        document.getElementById('items')?.appendChild(row);
-        row.querySelector(\`#\${id}_removeBtn\`)?.addEventListener('click', () => row.remove());
-        row.querySelector(\`#\${id}_previewBtn\`)?.addEventListener('click', async () => {
-          const f = row.querySelector(\`#\${id}_file\`)?.files?.[0];
-          if (!f) return alert('請先選擇圖片');
-          const b64 = await fileToBase64(f);
-          const w = window.open();
-          w.document.write(\`<img src="data:image/*;base64,\${b64}" style="max-width:100%"/>\`);
-        });
-      }
-
-      document.getElementById('addItem')?.addEventListener('click', addItemRow);
-      addItemRow();
-
-      function slugify(str) {
-        const lower = String(str).toLowerCase();
-        let out = '';
-        for (let i = 0; i < lower.length; i++) {
-          const ch = lower[i];
-          const isAZ = ch >= 'a' && ch <= 'z';
-          const is09 = ch >= '0' && ch <= '9';
-          if (isAZ || is09) {
-            out += ch;
-          } else if (out[out.length - 1] !== '-') {
-            out += '-';
-          }
-        }
-        while (out.startsWith('-')) out = out.slice(1);
-        while (out.endsWith('-')) out = out.slice(0, -1);
-        return out;
-      }
-
-      document.getElementById('upload')?.addEventListener('click', async () => {
-        const title = document.getElementById('title')?.value?.trim() || '';
-        const date = document.getElementById('date')?.value || '';
-        const tags = document.getElementById('tags')?.value?.trim() || '';
-        let slug = document.getElementById('slug')?.value?.trim() || '';
-
-        const rows = Array.from(document.querySelectorAll('#items > div'));
-        if (!rows.length) return alert('請至少新增一張照片');
-
-        const items = [];
-        for (const row of rows) {
-          const f = row.querySelector('input[type=file]')?.files?.[0];
-          const caption = row.querySelector('input[type=text]')?.value?.trim() || '';
-          if (!f) return alert('有一列未選擇圖片');
-          if (f.size > 10 * 1024 * 1024) return alert('有圖片超過 10 MB');
-          items.push({ filename: f.name, caption, fileBase64: await fileToBase64(f) });
-        }
-
-        if (!slug) slug = slugify(`${title || 'case'}-${Date.now().toString().slice(-6)}`);
-        const valid = /^[a-z0-9-]{3,}$/.test(slug);
-        if (!valid) return alert('自訂網址代稱僅能使用小寫英數與短橫，至少 3 碼');
-
-        try {
-          document.getElementById('progress').textContent = '上傳並建立中…';
-          const res = await fetch('/.netlify/functions/create-post', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, date, tags, slug, items })
-          }).then(r => r.json());
-
-          if (!res.ok) throw new Error(res.error || 'unknown');
-
-          const shareUrl = location.origin + location.pathname + '#/v/' + encodeURIComponent(res.slug);
-          await navigator.clipboard?.writeText(shareUrl).catch(()=>{});
-          document.getElementById('progress').textContent = '完成！已複製連結';
-          location.hash = '#/v/' + encodeURIComponent(res.slug);
-        } catch (e) {
-          document.getElementById('progress').textContent = '';
-          alert('建立失敗：' + e.message);
-        }
-      });
-
-      async function loadPost(slug) {
-        try {
-          document.getElementById('progress').textContent = '讀取中…';
-          const data = await fetch('/.netlify/functions/get-post?slug=' + encodeURIComponent(slug)).then(r => r.json());
-          if (data.error) throw new Error(data.error);
-          document.getElementById('v-title').textContent = data.title || '未命名案件';
-          document.getElementById('v-date').textContent = data.date ? new Date(data.date).toLocaleDateString() : '';
-          document.getElementById('v-id').textContent = 'Slug: ' + data.slug;
-          const tagsBox = document.getElementById('v-tags');
-          tagsBox.innerHTML = '';
-          (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).forEach(t => {
-            const span = document.createElement('span');
-            span.className = 'tag';
-            span.textContent = '#' + t;
-            tagsBox.appendChild(span);
-          });
-          const g = document.getElementById('gallery');
-          g.innerHTML = '';
-          (data.items || []).forEach((it, idx) => {
-            const card = document.createElement('div');
-            card.className = 'card p-3';
-            card.innerHTML = `
-              <img src="${it.url}" class="w-full object-contain max-h-[60vh] bg-slate-50 dark:bg-slate-900 rounded-xl"/>
-              <div class="mt-2 text-sm text-slate-700 dark:text-slate-300">${it.caption ? it.caption : \`照片 \${idx+1}\`}</div>`;
-            g.appendChild(card);
-          });
-          document.getElementById('downloadZip').href = (data.zip_url || (data.items?.[0]?.url ?? '#'));
-          document.getElementById('progress').textContent = '';
-          document.title = `${data.title || ''}｜清洗前後拼貼`;
-        } catch (e) {
-          document.getElementById('progress').textContent = '找不到此頁：' + e.message;
-        }
-      }
-
-      // 嘗試執行路由；若失敗，至少 editor 仍可見
-      try { route(); } catch (e) { console.error(e); }
-    } catch (e) {
-      console.error('初始化錯誤：', e);
+    // 主題切換
+    const tBtn = document.getElementById('toggle-theme');
+    if (tBtn) tBtn.addEventListener('click', () => {
+      root.classList.toggle('dark');
+      localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
+    });
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.classList.add('dark');
     }
+
+    // 路由
+    function route() {
+      const hash = location.hash || '#/new';
+      if (hash.startsWith('#/v/')) {
+        if (editor) editor.classList.add('hidden');
+        if (viewer) viewer.classList.remove('hidden');
+        const slug = decodeURIComponent(hash.replace('#/v/', ''));
+        loadPost(slug);
+      } else {
+        if (viewer) viewer.classList.add('hidden');
+        if (editor) editor.classList.remove('hidden');
+      }
+    }
+    window.addEventListener('hashchange', route);
+
+    // base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const s = String(r.result);
+          const comma = s.indexOf(',');
+          resolve(comma >= 0 ? s.slice(comma + 1) : s);
+        };
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    // add row
+    function addItemRow() {
+      const id = 'i_' + Math.random().toString(36).slice(2);
+      const row = document.createElement('div');
+      row.className = 'grid md:grid-cols-3 gap-3 items-start';
+      row.innerHTML = `
+        <input type="file" accept="image/*" class="input" id="${id}_file" />
+        <input type="text" class="input" id="${id}_caption" placeholder="照片說明（例如：房間冷氣）" />
+        <div class="flex gap-2">
+          <button class="btn" id="${id}_previewBtn">預覽</button>
+          <button class="btn" id="${id}_removeBtn">刪除</button>
+        </div>`;
+      document.getElementById('items').appendChild(row);
+      row.querySelector('#' + id + '_removeBtn').addEventListener('click', () => row.remove());
+      row.querySelector('#' + id + '_previewBtn').addEventListener('click', async () => {
+        const f = row.querySelector('#' + id + '_file').files[0];
+        if (!f) return alert('請先選擇圖片');
+        const b64 = await fileToBase64(f);
+        const w = window.open();
+        w.document.write('<img src="data:image/*;base64,' + b64 + '" style="max-width:100%"/>');
+      });
+    }
+
+    if (addItemBtn) addItemBtn.addEventListener('click', addItemRow);
+    addItemRow();
+
+    // slugify
+    function slugify(str) {
+      const lower = String(str).toLowerCase();
+      let out = '';
+      for (let i = 0; i < lower.length; i++) {
+        const ch = lower[i];
+        const isAZ = ch >= 'a' && ch <= 'z';
+        const is09 = ch >= '0' && ch <= '9';
+        if (isAZ || is09) out += ch;
+        else if (out[out.length - 1] !== '-') out += '-';
+      }
+      while (out.startsWith('-')) out = out.slice(1);
+      while (out.endsWith('-')) out = out.slice(0, -1);
+      return out;
+    }
+
+    // 上傳
+    if (uploadBtn) uploadBtn.addEventListener('click', async () => {
+      const title = document.getElementById('title').value.trim();
+      const date = document.getElementById('date').value;
+      const tags = document.getElementById('tags').value.trim();
+      let slug = document.getElementById('slug').value.trim();
+
+      const rows = Array.from(document.querySelectorAll('#items > div'));
+      if (!rows.length) return alert('請至少新增一張照片');
+
+      const items = [];
+      for (const row of rows) {
+        const f = row.querySelector('input[type=file]').files[0];
+        const caption = row.querySelector('input[type=text]').value.trim();
+        if (!f) return alert('有一列未選擇圖片');
+        if (f.size > 10 * 1024 * 1024) return alert('有圖片超過 10 MB');
+        items.push({ filename: f.name, caption, fileBase64: await fileToBase64(f) });
+      }
+
+      if (!slug) slug = slugify((title || 'case') + '-' + Date.now().toString().slice(-6));
+      if (!/^[a-z0-9-]{3,}$/.test(slug)) return alert('自訂網址代稱僅能使用小寫英數與短橫，至少 3 碼');
+
+      try {
+        const res = await fetch('/.netlify/functions/create-post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, date, tags, slug, items })
+        }).then(r => r.json());
+        if (!res.ok) throw new Error(res.error || 'unknown');
+        const shareUrl = location.origin + location.pathname + '#/v/' + encodeURIComponent(res.slug);
+        await navigator.clipboard?.writeText(shareUrl).catch(() => {});
+        location.hash = '#/v/' + encodeURIComponent(res.slug);
+      } catch (e) {
+        alert('建立失敗：' + e.message);
+      }
+    });
+
+    // 讀取頁
+    async function loadPost(slug) {
+      try {
+        const data = await fetch('/.netlify/functions/get-post?slug=' + encodeURIComponent(slug)).then(r => r.json());
+        if (data.error) throw new Error(data.error);
+        document.getElementById('v-title').textContent = data.title || '未命名案件';
+        document.getElementById('v-date').textContent = data.date ? new Date(data.date).toLocaleDateString() : '';
+        document.getElementById('v-id').textContent = 'Slug: ' + data.slug;
+        const tagsBox = document.getElementById('v-tags');
+        tagsBox.innerHTML = '';
+        (data.tags || '').split(',').map(t=>t.trim()).filter(Boolean).forEach(t => {
+          const span = document.createElement('span');
+          span.className = 'tag';
+          span.textContent = '#' + t;
+          tagsBox.appendChild(span);
+        });
+        const g = document.getElementById('gallery');
+        g.innerHTML = '';
+        (data.items || []).forEach((it, idx) => {
+          const card = document.createElement('div');
+          card.className = 'card p-3';
+          card.innerHTML = '<img src="' + it.url + '" class="w-full object-contain max-h-[60vh] bg-slate-50 dark:bg-slate-900 rounded-xl"/>' +
+                           '<div class="mt-2 text-sm text-slate-700 dark:text-slate-300">' + (it.caption || ('照片 ' + (idx+1))) + '</div>';
+          g.appendChild(card);
+        });
+        document.getElementById('downloadZip').href = (data.zip_url || (data.items?.[0]?.url ?? '#'));
+      } catch (e) {
+        alert('找不到此頁：' + e.message);
+      }
+    }
+
+    // 啟動路由
+    route();
+  });
   </script>
 </body>
 </html>
