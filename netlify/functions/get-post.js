@@ -1,13 +1,23 @@
-export default async (req, res) => {
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
+export default async (request) => {
   try {
-    const { slug } = req.query || {};
-    if (!slug) return res.status(400).json({ error: 'slug required' });
-    const url = `https://res.cloudinary.com/${process.env.CLD_CLOUD_NAME}/raw/upload/collages/${slug}/data.json`;
-    const r = await fetch(url);
-    if (!r.ok) return res.status(404).json({ error: 'not found' });
-    const json = await r.json();
-    return res.status(200).json(json);
+    const url = new URL(request.url);
+    const slug = url.searchParams.get('slug');
+    if (!slug) return json({ error: 'slug required' }, 400);
+
+    const cloud = process.env.CLD_CLOUD_NAME;
+    const dataUrl = `https://res.cloudinary.com/${cloud}/raw/upload/collages/${slug}/data.json`;
+    const r = await fetch(dataUrl);
+    if (!r.ok) return json({ error: 'not found' }, 404);
+    const jsonData = await r.json();
+    return json(jsonData);
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return json({ error: String(e && e.message || e) }, 500);
   }
 }
