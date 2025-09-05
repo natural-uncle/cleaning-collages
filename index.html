@@ -92,14 +92,13 @@ document.getElementById('upload').addEventListener('click',async()=>{
     const text=await resp.text();let data;try{data=JSON.parse(text);}catch{data={error:text};}
     if(!resp.ok||!data.ok) throw new Error(data.error||'建立失敗');
 
-    // 成功：跳轉並顯示分享連結 + 複製按鈕
-    const shareUrl=location.origin+location.pathname+'#/v/'+encodeURIComponent(data.slug);
-    location.hash='#/v/'+encodeURIComponent(data.slug);
+    // ❌ 刪掉這一段
     const shareBox=document.getElementById('share-link');
+    const shareUrl=location.href;
     document.getElementById('share-url').value=shareUrl;
     shareBox.classList.remove('hidden');
     document.getElementById('copy-link').onclick=()=>{
-      navigator.clipboard.writeText(shareUrl).then(()=>alert('已複製連結！'));
+    navigator.clipboard.writeText(shareUrl).then(()=>alert('已複製連結！'));
     };
     setProgress('完成！已產生連結');
   }catch(e){
