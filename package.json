@@ -1,0 +1,9 @@
+{
+  "name": "cleaning-collages-cloudinary-only",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "cloudinary": "^1.41.0"
+  }
+}
