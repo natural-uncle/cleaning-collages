@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>清洗前後拼貼照片分享（Cloudinary-Only）</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="max-w-3xl mx-auto p-6 md:p-10">
+    <h1 class="text-2xl font-bold mb-4">清洗前後拼貼照片分享</h1>
+    <section id="editor" class="bg-white rounded-xl border p-5">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm mb-1">案件/地點</label>
+          <input id="title" class="w-full border rounded p-2" placeholder="例如：台北王小姐"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">服務日期</label>
+          <input id="date" type="date" class="w-full border rounded p-2"/>
+        </div>
+      </div>
+      <div class="mt-4">
+        <label class="block text-sm mb-2">照片清單（可新增多張）</label>
+        <div id="items" class="space-y-3"></div>
+        <button id="addItem" class="border rounded px-3 py-2 mt-2">＋ 新增一張</button>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="block text-sm mb-1">標籤（選填）</label>
+          <input id="tags" class="w-full border rounded p-2" placeholder="冷氣, 住家"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">自訂網址代稱（slug）</label>
+          <input id="slug" class="w-full border rounded p-2" placeholder="wang-2025-09"/>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <button id="upload" class="bg-slate-900 text-white rounded px-4 py-2">上傳全部並產生連結</button>
+        <span id="progress" class="text-sm text-slate-600"></span>
+      </div>
+    </section>
+
+    <section id="viewer" class="hidden mt-6">
+      <article class="bg-white rounded-xl border overflow-hidden">
+        <div class="p-5 border-b">
+          <h2 id="v-title" class="text-xl font-semibold"></h2>
+          <p class="text-sm text-slate-600"><span id="v-date"></span></p>
+          <div id="v-tags" class="flex flex-wrap gap-2 mt-2 text-xs"></div>
+        </div>
+        <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-5"></div>
+      </article>
+    </section>
+  </div>
+
+<script>
+const editor = document.getElementById('editor');
+const viewer = document.getElementById('viewer');
+function route(){ const h=location.hash||'#/new'; if(h.startsWith('#/v/')){editor.classList.add('hidden');viewer.classList.remove('hidden');loadPost(decodeURIComponent(h.replace('#/v/','')));}else{viewer.classList.add('hidden');editor.classList.remove('hidden');}}
+window.addEventListener('hashchange', route);
+
+// helpers
+function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result);resolve(s.slice(s.indexOf(',')+1));};r.onerror=reject;r.readAsDataURL(file);});}
+function slugify(s){s=String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');return s;}
+
+// add row
+function addItemRow(){const id='i_'+Math.random().toString(36).slice(2);const d=document.createElement('div');d.className='grid md:grid-cols-3 gap-3';d.innerHTML=`<input type="file" accept="image/*" class="border rounded p-2"/><input class="border rounded p-2" placeholder="照片說明"/><button class="border rounded px-3">刪除</button>`;d.querySelector('button').addEventListener('click',()=>d.remove());document.getElementById('items').appendChild(d);}document.getElementById('addItem').addEventListener('click',addItemRow);addItemRow();
+
+async function uploadAll(){
+  const title=document.getElementById('title').value.trim();
+  const date=document.getElementById('date').value;
+  const tags=document.getElementById('tags').value.trim();
+  let slug=document.getElementById('slug').value.trim();
+  const rows=[...document.querySelectorAll('#items>div')];
+  if(!rows.length) return alert('請新增至少一張');
+  const items=[];
+  for(const r of rows){const f=r.querySelector('input[type=file]').files[0];const caption=r.querySelector('input[placeholder="照片說明"]').value.trim(); if(!f) return alert('有一列未選擇圖片'); if(f.size>10*1024*1024) return alert('有圖片超過 10MB'); items.push({filename:f.name, caption, fileBase64:await fileToBase64(f)});}
+  if(!slug) slug=slugify((title||'case')+'-'+Date.now().toString().slice(-6));
+
+  setProgress('上傳中...');
+
+  // 傳到 create-post（這版不使用 Blobs，後端會把 JSON 存到 Cloudinary raw）
+  const res=await fetch('/.netlify/functions/create-post', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title,date,tags,slug,items})}).then(r=>r.json());
+  if(!res.ok) return alert('建立失敗：'+(res.error||'unknown'));
+  const url=location.origin+location.pathname+'#/v/'+encodeURIComponent(res.slug);
+  await navigator.clipboard?.writeText(url).catch(()=>{});
+  location.hash = '#/v/'+encodeURIComponent(res.slug);
+}
+document.getElementById('upload').addEventListener('click', uploadAll);
+
+async function loadPost(slug){
+  const data=await fetch('/.netlify/functions/get-post?slug='+encodeURIComponent(slug)).then(r=>r.json());
+  if(data.error) return alert('讀取失敗：'+data.error);
+  document.getElementById('v-title').textContent=data.title||'';
+  document.getElementById('v-date').textContent=data.date?new Date(data.date).toLocaleDateString():'';
+  const box=document.getElementById('v-tags'); box.innerHTML=''; (data.tags||'').split(',').map(t=>t.trim()).filter(Boolean).forEach(t=>{const s=document.createElement('span'); s.className='px-2 py-0.5 rounded-full bg-slate-100'; s.textContent='#'+t; box.appendChild(s);});
+  const g=document.getElementById('gallery'); g.innerHTML=''; (data.items||[]).forEach((it,i)=>{const d=document.createElement('div'); d.className='border rounded p-3'; d.innerHTML=`<img src="${it.url}" class="w-full object-contain max-h-[60vh] bg-slate-50 rounded"/><div class="mt-2 text-sm">${it.caption||'照片 '+(i+1)}</div>`; g.appendChild(d);});
+}
+function setProgress(m){document.getElementById('progress').textContent=m||'';}
+route();
+</script>
+</body>
+</html>
