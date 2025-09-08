@@ -24,21 +24,23 @@ export default async (_request) => {
     }
 
     const items = [];
-    let nextCursor = null;
+    let nextCursor = undefined;
 
+    // 使用 Admin API 列出 raw 資源（避免 Search API 權限或索引問題）
+    // 逐頁抓取 collages/ 前綴
     do {
-      // 抓取 collages 資料夾底下所有 raw 檔，之後再在程式端過濾
-      const res = await cloudinary.search
-        .expression('resource_type:raw AND folder:collages')
-        .max_results(100)
-        .next_cursor(nextCursor || undefined)
-        .execute();
+      const res = await cloudinary.api.resources({
+        resource_type: 'raw',
+        type: 'upload',
+        prefix: 'collages/',
+        max_results: 100,
+        next_cursor: nextCursor,
+      });
 
-      for (const r of res.resources || []) {
+      const resources = res.resources || [];
+      for (const r of resources) {
         const pid = r.public_id || '';
-        // 接受兩種 public_id 形態：
-        // 1) collages/{slug}/data            (無副檔名，由 format 決定 json)
-        // 2) collages/{slug}/data.json       (public_id 本身含 .json)
+        // 接受 collages/{slug}/data 或 collages/{slug}/data.json
         const m = pid.match(/^collages\/([^/]+)\/data(?:\.json)?$/i);
         if (!m) continue;
         const slug = m[1];
@@ -64,7 +66,7 @@ export default async (_request) => {
         });
       }
 
-      nextCursor = res.next_cursor || null;
+      nextCursor = res.next_cursor || undefined;
     } while (nextCursor);
 
     items.sort((a,b)=> new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0));
