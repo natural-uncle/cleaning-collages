@@ -17,7 +17,7 @@
     header { position: sticky; top:0; z-index:10; backdrop-filter: saturate(180%) blur(10px); background: rgba(255,255,255,.85); border-bottom:1px solid #eee; }
     .nav { display:flex; align-items:center; justify-content:space-between; height:64px; }
     .logo { display:flex; align-items:center; gap:10px; font-weight:800 }
-    .logo img { height:40px; width:auto; object-fit:contain; border-radius:6px }
+    .logo img { height:40px; width:auto; max-height:40px; max-width:none; object-fit:contain; border-radius:6px }
     .searchbar { display:flex; gap:10px; flex-wrap:wrap }
     .searchbar input, .searchbar select { padding:10px 12px; border:1px solid #ddd; border-radius:10px }
     .searchbar button { padding:10px 14px; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; border:0 }
@@ -41,7 +41,7 @@
 <body>
   <header>
     <div class="container nav">
-      <a class="logo" href="/">
+      <a class="logo" href="./">
         <img src="logo.png" alt="voxhuma">
         <span>voxhuma</span>
       </a>
@@ -130,7 +130,7 @@
 
       for (const it of pageItems){
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
-        const detailUrl = `/post.html?slug=${encodeURIComponent(it.slug)}`;
+        const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`; // 使用相對連結，避免子路徑部署時 404
         const viewUrl = it.preview || it.cover || it.items?.[0]?.url || '#';
         tpl.querySelector('.thumb').href = detailUrl;
         tpl.querySelector('.thumb').style.backgroundImage = viewUrl ? `url("${viewUrl}")` : '';
