@@ -39,6 +39,11 @@
   </style>
 </head>
 <body>
+<script>
+  if (sessionStorage.getItem("auth")!=="ok"){
+    location.href="login.html";
+  }
+</script>
   <header>
     <div class="container nav">
       <a class="logo" href="./">
