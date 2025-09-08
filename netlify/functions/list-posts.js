@@ -11,7 +11,6 @@ function json(obj, status = 200) {
 }
 
 function errorJSON(err, status = 500) {
-  // 讓錯誤更可讀：優先用 message，其次用 error.message，最後整個物件 JSON 字串化
   const message = (err && (err.message || err.error?.message)) || undefined;
   const payload = { error: message || err || 'Unknown error' };
   try { console.error('[list-posts] error:', err); } catch {}
@@ -28,26 +27,29 @@ export default async (_request) => {
     let nextCursor = null;
 
     do {
-      // 使用 folder:collages 與 resource_type:raw 取得所有 raw 檔
+      // 抓取 collages 資料夾底下所有 raw 檔，之後再在程式端過濾
       const res = await cloudinary.search
         .expression('resource_type:raw AND folder:collages')
-        // .with_field('public_id') // public_id 會預設回傳，這行在部分 SDK 版本會報錯，故移除
         .max_results(100)
         .next_cursor(nextCursor || undefined)
         .execute();
 
       for (const r of res.resources || []) {
-        // 只收 collages/{slug}/data 這種 public_id
-        if (!r.public_id || !/^(?:collages\/)[^/]+\/data$/.test(r.public_id)) continue;
-        const slug = r.public_id.replace(/^collages\//, '').replace(/\/data$/, '');
+        const pid = r.public_id || '';
+        // 接受兩種 public_id 形態：
+        // 1) collages/{slug}/data            (無副檔名，由 format 決定 json)
+        // 2) collages/{slug}/data.json       (public_id 本身含 .json)
+        const m = pid.match(/^collages\/([^/]+)\/data(?:\.json)?$/i);
+        if (!m) continue;
+        const slug = m[1];
 
-        // 下載對應的 data.json（raw）
-        const url = `https://res.cloudinary.com/${process.env.CLD_CLOUD_NAME}/raw/upload/${encodeURIComponent(r.public_id)}.json`;
+        // 依 public_id 是否已含 .json 來決定取檔 URL
+        const hasExt = /\.json$/i.test(pid);
+        const cloud = process.env.CLD_CLOUD_NAME;
+        const url = `https://res.cloudinary.com/${cloud}/raw/upload/${encodeURIComponent(pid + (hasExt ? '' : '.json'))}`;
+
         const resp = await fetch(url);
-        if (!resp.ok) {
-          // 略過單筆取回失敗，不中斷整體流程
-          continue;
-        }
+        if (!resp.ok) continue;
         const data = await resp.json().catch(() => null);
         if (!data) continue;
 
@@ -65,7 +67,6 @@ export default async (_request) => {
       nextCursor = res.next_cursor || null;
     } while (nextCursor);
 
-    // 預設依日期（新→舊）
     items.sort((a,b)=> new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0));
 
     return json({ items });
