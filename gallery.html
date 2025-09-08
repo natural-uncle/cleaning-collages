@@ -12,12 +12,12 @@
     *{ box-sizing:border-box }
     html, body { margin:0; padding:0; font-family: 'Noto Sans TC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--fg); background: var(--bg); }
     a { color: inherit; text-decoration: none }
-    img { max-width: 100%; display:block }
+    img { max-width: 100%; display:block; height:auto }
     .container { max-width: var(--max-w); margin: 0 auto; padding: 0 20px; }
     header { position: sticky; top:0; z-index:10; backdrop-filter: saturate(180%) blur(10px); background: rgba(255,255,255,.85); border-bottom:1px solid #eee; }
     .nav { display:flex; align-items:center; justify-content:space-between; height:64px; }
     .logo { display:flex; align-items:center; gap:10px; font-weight:800 }
-    .logo img { width:32px; height:32px; border-radius:8px }
+    .logo img { height:40px; width:auto; max-height:40px; max-width:none; object-fit:contain; border-radius:6px }
     .searchbar { display:flex; gap:10px; flex-wrap:wrap }
     .searchbar input, .searchbar select { padding:10px 12px; border:1px solid #ddd; border-radius:10px }
     .searchbar button { padding:10px 14px; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; border:0 }
@@ -165,7 +165,7 @@
         currentPage = 1;
         render(filtered);
       }catch(e){
-        document.querySelector('#list').innerHTML = `<div class="empty">${e.message||e}</div>`;
+        document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`;
       }
     }
 
