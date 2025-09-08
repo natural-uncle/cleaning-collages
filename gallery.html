@@ -83,11 +83,9 @@
   </template>
 
   <script>
-    // 分頁設定
     const PAGE_SIZE = 12;
     let currentPage = 1;
     let lastData = [];
-
     async function fetchList() {
       const url = new URL(location.origin + '/.netlify/functions/list-posts');
       const r = await fetch(url);
@@ -95,7 +93,6 @@
       const json = await r.json();
       return Array.isArray(json.items) ? json.items : [];
     }
-
     function applyFilters(items){
       const q = document.querySelector('#q').value.trim().toLowerCase();
       const sort = document.querySelector('#sort').value;
@@ -113,21 +110,15 @@
       });
       return out;
     }
-
     function render(items){
       const list = document.querySelector('#list');
       const empty = document.querySelector('#empty');
       const pager = document.querySelector('#pager');
       list.innerHTML = '';
-
-      if (!items.length){
-        empty.hidden = false; pager.hidden = true; return;
-      } else { empty.hidden = true; }
-
+      if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
       const start = (currentPage-1) * PAGE_SIZE;
       const pageItems = items.slice(start, start + PAGE_SIZE);
       const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-
       for (const it of pageItems){
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
         const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
@@ -148,7 +139,6 @@
         });
         list.appendChild(tpl);
       }
-
       pager.hidden = totalPages <= 1;
       document.querySelector('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
       document.querySelector('#prev').disabled = currentPage <= 1;
@@ -156,18 +146,7 @@
       document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
       document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
     }
-
-    async function load(){
-      try{
-        if (!lastData.length){ lastData = await fetchList(); }
-        const filtered = applyFilters(lastData);
-        currentPage = 1;
-        render(filtered);
-      }catch(e){
-        document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`;
-      }
-    }
-
+    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
   </script>
 </body>
