@@ -39,6 +39,11 @@
   </style>
 </head>
 <body>
+<script>
+  if (sessionStorage.getItem("auth")!=="ok"){
+    location.href="login.html";
+  }
+</script>
   <header>
     <div class="container nav">
       <a class="logo" href="./">
@@ -75,7 +80,6 @@
       <div class="meta">
         <div class="row">
           <a class="title" target="_blank" rel="noopener"></a>
-          <span class="muted date"></span>
         </div>
         <div class="tags"></div>
       </div>
@@ -130,13 +134,8 @@
         const title = it.title || it.slug || '未命名';
         tpl.querySelector('.title').textContent = title;
         tpl.querySelector('.title').href = detailUrl;
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleString('zh-TW');
-        tpl.querySelector('.date').textContent = dateStr;
         const tagsWrap = tpl.querySelector('.tags');
-        (it.tags || []).forEach(t=>{
-          const span = document.createElement('span');
-          span.className = 'tag'; span.textContent = t; tagsWrap.appendChild(span);
-        });
+        (it.tags || []).forEach(t=>{ const span=document.createElement('span'); span.className = 'tag'; span.textContent = t; tagsWrap.appendChild(span); });
         list.appendChild(tpl);
       }
       pager.hidden = totalPages <= 1;
