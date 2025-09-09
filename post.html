@@ -89,7 +89,7 @@ function initLightbox(images){
   function prev(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX - 1 + LB_IMAGES.length) % LB_IMAGES.length; update(); } }
   function next(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX + 1) % LB_IMAGES.length; update(); } }
   closeBtn.onclick = close; prevBtn.onclick = prev; nextBtn.onclick = next;
-  overlay.addEventListener('click', function(e){ const dialog=document.getElementById('lb-dialog'); if(e.target===overlay || !dialog.contains(e.target)) close(); });
+  overlay.addEventListener('click', function(e){ if (e.target === overlay) close(); });
   document.addEventListener('keydown', function(e){
     if (overlay.style.display !== 'flex') return;
     if (e.key === 'Escape') close();
