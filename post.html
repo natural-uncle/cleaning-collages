@@ -34,6 +34,17 @@
     .meta { display:flex; align-items:center; gap:8px; color:#777; font-size:14px }
 
     @media (min-width: 900px){ .card{ grid-column: span 6 } }
+      /* Lightbox */
+    .lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:1000}
+    .lightbox.open{display:flex}
+    .lightbox-inner{position:relative;max-width:96vw;max-height:90vh;}
+    .lightbox img{max-width:96vw;max-height:80vh;display:block;margin:0 auto;border-radius:10px}
+    .lightbox .caption{margin-top:10px;color:#f3f4f6;text-align:center}
+    .lb-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px 12px;border-radius:999px;cursor:pointer;user-select:none}
+    .lb-prev{left:-56px}
+    .lb-next{right:-56px}
+    .lb-close{position:absolute;top:-48px;right:-8px;background:rgba(255,255,255,.2);border:0;padding:8px 10px;border-radius:999px;color:#fff;cursor:pointer}
+    @media (max-width: 640px){ .lb-prev{left:8px} .lb-next{right:8px} .lb-close{top:8px;right:8px} }
   </style>
 </head>
 <body>
@@ -60,6 +71,17 @@
 
     <section class="grid" id="images"></section>
   </main>
+
+  <!-- Lightbox overlay -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner">
+      <button class="lb-close" aria-label="關閉">✕</button>
+      <button class="lb-btn lb-prev" aria-label="上一張">‹</button>
+      <img id="lb-image" alt="預覽">
+      <button class="lb-btn lb-next" aria-label="下一張">›</button>
+      <div id="lb-caption" class="caption"></div>
+    </div>
+  </div>
 
   <script>
     // 讓錯誤更可見，避免因 JS 失敗顯示空白
@@ -116,19 +138,19 @@
       grid.innerHTML = '';
 
       if (images.length){
-        qsel('firstimg').href = images[0].url;
+        qsel('firstimg').href = '#';
+        qsel('firstimg').onclick = (e)=>{ e.preventDefault(); openLightbox(0); };
       } else {
         qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true');
       }
 
-      for (const it of images){
+      images.forEach((it, idx)=>{
         const card = document.createElement('article');
         card.className = 'card';
 
         const link = document.createElement('a');
         link.href = it.url;
-        link.target = '_blank';
-        link.rel = 'noopener';
+        link.dataset.idx = String(idx);
 
         const img = document.createElement('img');
         img.loading = 'lazy';
@@ -136,6 +158,12 @@
         img.src = it.url;
         img.alt = it.alt || it.caption || data.title || slug || 'image';
         link.appendChild(img);
+
+        // 攔截點擊改用燈箱
+        link.addEventListener('click', (e)=>{
+          e.preventDefault();
+          openLightbox(idx);
+        });
 
         card.appendChild(link);
 
@@ -145,8 +173,53 @@
         card.appendChild(cap);
 
         grid.appendChild(card);
-      }
+      });
     }
+
+    // === Lightbox JS ===
+    let LB = { images: [], idx: 0 };
+    const lbEl = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-image');
+    const lbCap = document.getElementById('lb-caption');
+    const btnPrev = lbEl.querySelector('.lb-prev');
+    const btnNext = lbEl.querySelector('.lb-next');
+    const btnClose = lbEl.querySelector('.lb-close');
+
+    function showImage(i){
+      if (!LB.images.length) return;
+      LB.idx = (i + LB.images.length) % LB.images.length;
+      const it = LB.images[LB.idx];
+      lbImg.src = it.url;
+      lbImg.alt = it.alt || it.caption || '';
+      lbCap.textContent = it.caption || it.alt || '';
+    }
+    function openLightbox(i){
+      document.documentElement.style.overflow = 'hidden';
+      lbEl.classList.add('open');
+      showImage(i);
+    }
+    function closeLightbox(){
+      lbEl.classList.remove('open');
+      document.documentElement.style.overflow = '';
+    }
+
+    btnPrev.addEventListener('click', ()=> showImage(LB.idx - 1));
+    btnNext.addEventListener('click', ()=> showImage(LB.idx + 1));
+    btnClose.addEventListener('click', closeLightbox);
+    lbEl.addEventListener('click', (e)=>{ if(e.target === lbEl) closeLightbox(); });
+    window.addEventListener('keydown', (e)=>{
+      if(!lbEl.classList.contains('open')) return;
+      if(e.key === 'Escape') closeLightbox();
+      if(e.key === 'ArrowLeft') showImage(LB.idx - 1);
+      if(e.key === 'ArrowRight') showImage(LB.idx + 1);
+    });
+
+    // 將 images 存進 LB，讓燈箱可用
+    const _origRender = render;
+    render = function(slug, data){
+      LB.images = Array.isArray(data.items) ? data.items : [];
+      _origRender(slug, data);
+    };
 
     load();
   </script>
