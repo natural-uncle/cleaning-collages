@@ -66,6 +66,12 @@
       <button id="view-cards" class="viewbtn" aria-pressed="true">卡片模式</button>
       <button id="view-thumbs" class="viewbtn" aria-pressed="false">縮圖網格模式</button>
     </div> <span id="count" class="muted"></span>
+    <div class="toolbar" role="toolbar" aria-label="批次下載">
+      <button id="sel-page">全選本頁</button>
+      <button id="sel-clear">清除選取</button>
+      <button id="download-selected" class="btn primary" disabled>批次下載</button>
+      <span id="sel-count" class="muted"></span>
+    </div>
 </div>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
@@ -77,7 +83,7 @@
   </main>
 
   <template id="card-tpl">
-    <article class="card">
+    <article class="card"><input type="checkbox" class="select" aria-label="選取此作品">
       <a class="thumb" target="_blank" rel="noopener" aria-label="開啟作品"></a>
       <div class="meta">
         <div class="row">
@@ -85,11 +91,14 @@
           <span class="muted date"></span>
         </div>
         <div class="tags"></div>
+        <div class="row actions"><button class="btn share" type="button">分享</button></div>
       </div>
     </article>
   </template>
 
   <script>
+
+
 const PAGE_SIZE = 12;
 let showAll = false;
 let viewMode = 'cards'; // 'cards' | 'thumbs'
@@ -104,7 +113,16 @@ async function fetchList() {
   return Array.isArray(json.items) ? json.items : [];
 }
 
-function applyFilters(items){
+async function downloadSelected(){
+      if (!selected.size) return;
+      const slugs = Array.from(selected);
+      const res = await fetch('/.netlify/functions/zip-batch', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ slugs }) });
+      if (!res.ok) { alert('打包下載失敗'); return; }
+      const blob = await res.blob();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `collages_${Date.now()}.zip`; document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
+    }
+
+    function applyFilters(items){
   const qEl = document.querySelector('#q');
   const sortEl = document.querySelector('#sort');
   const q = (qEl ? qEl.value : '').trim().toLowerCase();
@@ -128,7 +146,15 @@ function applyFilters(items){
   return out;
 }
 
-function render(items){
+function updateSelectionUI(){
+      const btn = document.getElementById('download-selected');
+      if (btn){ btn.disabled = selected.size === 0; btn.textContent = selected.size? `批次下載（${selected.size}）` : '批次下載'; }
+      const sc = document.getElementById('sel-count'); if (sc) sc.textContent = selected.size ? `已選 ${selected.size}` : '';
+    }
+    function render(items){
+      const selPageBtn = document.getElementById('sel-page'); if (selPageBtn) selPageBtn.onclick = ()=>{ const pageItems = showAll ? items : items.slice((currentPage-1)*PAGE_SIZE, (currentPage-1)*PAGE_SIZE + PAGE_SIZE); pageItems.forEach(it=>selected.add(it.slug)); render(items); };
+      const selClearBtn = document.getElementById('sel-clear'); if (selClearBtn) selClearBtn.onclick = ()=>{ selected.clear(); render(items); };
+      const dlBtn = document.getElementById('download-selected'); if (dlBtn) dlBtn.onclick = ()=> downloadSelected();
   try{ const c = document.getElementById('count'); if (c) c.textContent = `共 ${items.length} 筆作品`; }catch(_){}
   const list = document.querySelector('#list');
   const empty = document.querySelector('#empty');
@@ -165,9 +191,23 @@ function render(items){
       titleA.href = detailUrl;
       titleA.removeAttribute('target'); titleA.removeAttribute('rel');
     }
-    const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
+    const chk = tpl.querySelector('.select'); if (chk){ chk.checked = selected.has(it.slug); chk.onclick = (e)=> e.stopPropagation(); chk.onchange = (e)=>{ if(e.target.checked){ selected.add(it.slug); } else { selected.delete(it.slug); } updateSelectionUI(); }; }
+        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
     const dateEl = tpl.querySelector('.date'); if (dateEl) dateEl.textContent = dateStr;
     const tagsWrap = tpl.querySelector('.tags');
+        const shareBtn = tpl.querySelector('.share');
+        if (shareBtn) {
+          shareBtn.onclick = async (e)=>{
+            e.preventDefault();
+            const shareUrl = new URL(detailUrl, location.href).href;
+            const data = { title, text: title, url: shareUrl };
+            try {
+              if (navigator.share) { await navigator.share(data); }
+              else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(shareUrl); alert('已複製分享連結'); }
+              else { prompt('複製此連結：', shareUrl); }
+            } catch(_) {}
+          };
+        }
     if (tagsWrap){ (it.tags || []).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); }); }
     list.appendChild(tpl);
   }
@@ -218,6 +258,8 @@ async function load(){
 })();
 
 load();
+
+
 </script>
 </body>
 </html>
