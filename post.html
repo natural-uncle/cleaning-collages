@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>作品詳情｜voxhuma</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root { --max-w: 1120px; --fg:#0d0d0d; --muted:#666; --bg:#fff; --brand:#111827; --radius: 14px; }
+    *{ box-sizing:border-box }
+    html, body { margin:0; padding:0; font-family: 'Noto Sans TC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--fg); background: var(--bg); }
+    a { color: inherit; text-decoration: none }
+    img { max-width: 100%; display:block; height:auto }
+    .container { max-width: var(--max-w); margin: 0 auto; padding: 0 20px; }
+    header { position: sticky; top:0; z-index:10; backdrop-filter: saturate(180%) blur(10px); background: rgba(255,255,255,.85); border-bottom:1px solid #eee; }
+    .nav { display:flex; align-items:center; justify-content:space-between; height:64px; }
+    .logo { display:flex; align-items:center; gap:10px; font-weight:800 }
+    .logo img { height:40px; width:auto; max-height:40px; max-width:none; object-fit:contain; border-radius:6px }
+    main { padding:28px 0 60px }
+    .title { font-size: clamp(22px, 4vw, 36px); margin: 8px 0 8px; font-weight:800 }
+    .muted { color:var(--muted); font-size:14px }
+    .tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+    .tag { font-size:12px; padding:4px 8px; border-radius:999px; background:#f3f4f6; border:1px solid #eee }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px }
+    .btn { padding:10px 14px; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; border:0 }
+    .ghost { padding:10px 14px; border-radius:10px; border:1px solid #ddd; background:#fff }
+    .desc { margin-top:14px; line-height:1.7; color:#333 }
+    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:20px; margin-top:24px }
+    .card { grid-column: span 12; border:1px solid #eee; border-radius: var(--radius); overflow:hidden; background:#fff; }
+    .cap { padding:10px 12px; font-size:14px; color:#444; border-top:1px solid #f0f0f0 }
+    .meta { display:flex; align-items:center; gap:8px; color:#777; font-size:14px }
+    @media (min-width: 900px){ .card{ grid-column: span 6 } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="logo" href="gallery.html">
+        <img src="logo.png" alt="voxhuma">
+        <span>voxhuma</span>
+      </a>
+      <a class="ghost" href="gallery.html">回到清單</a>
+    </div>
+  </header>
+
+  <main class="container" id="main">
+    <h1 class="title" id="title">載入中…</h1>
+    <div class="meta"><span id="date"></span><span id="slug" class="muted"></span></div>
+    <div class="tags" id="tags"></div>
+    <div class="desc" id="desc"></div>
+    <div class="actions">
+      <a id="zip" class="ghost" href="#">下載 ZIP</a>
+      <a id="json" class="ghost" href="#" target="_blank" rel="noopener">查看 JSON</a>
+      <a id="firstimg" class="ghost" href="#" target="_blank" rel="noopener">查看首圖</a>
+    </div>
+
+    <section class="grid" id="images"></section>
+  </main>
+
+  <script>
+    window.addEventListener('error', (e)=>{
+      const el = document.createElement('pre');
+      el.style.whiteSpace='pre-wrap'; el.style.background='#fff3cd'; el.style.padding='12px'; el.style.border='1px solid #ffeeba'; el.style.borderRadius='8px'; el.style.margin='12px 0';
+      el.textContent = 'Error: ' + (e.message || e.error?.message || e.filename || '');
+      document.getElementById('main').prepend(el);
+    });
+    function qsel(id){ return document.getElementById(id); }
+    function getSlug(){ const u=new URL(location.href); return u.searchParams.get('slug') || ''; }
+    async function load(){
+      const slug = getSlug();
+      if (!slug){ qsel('title').textContent = '缺少 slug 參數'; return; }
+      try{
+        const res = await fetch(`/.netlify/functions/get-post?slug=${encodeURIComponent(slug)}`);
+        if (!res.ok) throw new Error('載入作品失敗');
+        const data = await res.json();
+        render(slug, data);
+      }catch(e){
+        qsel('title').textContent = e.message || e;
+      }
+    }
+    function render(slug, data){
+      document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
+      qsel('title').textContent = data.title || slug;
+      qsel('slug').textContent = ' / ' + slug;
+      const d = new Date(data.date || data.created_at || Date.now());
+      qsel('date').textContent = d.toLocaleString('zh-TW');
+      const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
+      (data.tags||[]).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
+      const desc = String(data.description || data.desc || '').trim();
+      qsel('desc').textContent = desc || '（此內容尚無說明）';
+      qsel('zip').href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
+      const cloud = (data.cloud_name) || (window.CLD_CLOUD_NAME) || '';
+      if (cloud) { qsel('json').href = `https://res.cloudinary.com/${cloud}/raw/upload/collages/${encodeURIComponent(slug)}/data.json`; } else { qsel('json').style.display='none'; }
+      const images = Array.isArray(data.items) ? data.items : [];
+      const grid = qsel('images'); grid.innerHTML = '';
+      if (images.length){ qsel('firstimg').href = images[0].url; } else { qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true'); }
+      for (const it of images){ const card=document.createElement('article'); card.className='card'; const img=document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.src=it.url; img.alt=it.alt || it.caption || data.title || slug || 'image'; card.appendChild(img); const cap=document.createElement('div'); cap.className='cap'; cap.textContent=it.caption || it.alt || ''; card.appendChild(cap); grid.appendChild(card); }
+    }
+    load();
+  </script>
+</body>
+</html>
