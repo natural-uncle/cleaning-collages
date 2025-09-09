@@ -37,6 +37,7 @@
     .pager button { padding:8px 12px; border:1px solid #ddd; background:#fff; border-radius:10px }
     @media (min-width: 900px){ .card{ grid-column: span 4 } }
   </style>
+  <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <header>
@@ -59,12 +60,16 @@
   </header>
 
   <main class="container">
-    <h1>作品清單</h1> <span id="count" class="muted"></span>
+    <h1>作品清單</h1>
+    <div class="toolbar" role="toolbar" aria-label="檢視模式">
+      <button id="view-cards" class="viewbtn" aria-pressed="true">卡片模式</button>
+      <button id="view-thumbs" class="viewbtn" aria-pressed="false">縮圖網格模式</button>
+    </div> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
-      <button id="prev">上一頁</button>
-      <span id="pageInfo" class="muted"></span>
-      <button id="next">下一頁</button>
+      <button id="first">第一頁</button>
+      <button id="last">最後一頁</button>
+      <button id="showall" data-all="0">顯示全部</button>
     </div>
     <div id="empty" class="empty" hidden>目前尚無作品</div>
   </main>
@@ -83,7 +88,10 @@
   </template>
 
   <script>
+
     const PAGE_SIZE = 12;
+    let showAll = false;
+    let viewMode = 'cards'; // 'cards' | 'thumbs'
     let currentPage = 1;
     let lastData = [];
     async function fetchList() {
@@ -111,15 +119,16 @@
       return out;
     }
     function render(items){
+      const list = document.querySelector('#list');
+      list.classList.toggle('thumbs', viewMode==='thumbs');
       try{ document.getElementById('count').textContent = `共 ${items.length} 筆作品`; }catch(_){}
       const list = document.querySelector('#list');
       const empty = document.querySelector('#empty');
       const pager = document.querySelector('#pager');
       list.innerHTML = '';
       if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
-      const start = (currentPage-1) * PAGE_SIZE;
-      const pageItems = items.slice(start, start + PAGE_SIZE);
       const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+      const pageItems = showAll ? items : (items.slice((currentPage-1)*PAGE_SIZE, (currentPage-1)*PAGE_SIZE + PAGE_SIZE));
       for (const it of pageItems){
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
         const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
@@ -140,15 +149,19 @@
         });
         list.appendChild(tpl);
       }
-      pager.hidden = totalPages <= 1;
+      pager.hidden = showAll ? false : (totalPages <= 1);
       document.querySelector('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
       document.querySelector('#prev').disabled = currentPage <= 1;
       document.querySelector('#next').disabled = currentPage >= totalPages;
       document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
       document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
     }
-    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class="empty">${e.message||e}</div>`; } }
+    async function load(){
+      const setView = (mode)=>{ viewMode = mode; const a=document.getElementById('view-cards'); const b=document.getElementById('view-thumbs'); if(a&&b){ a.setAttribute('aria-pressed', String(mode==='cards')); b.setAttribute('aria-pressed', String(mode==='thumbs')); } render(applyFilters(lastData)); };
+      const vc=document.getElementById('view-cards'); if(vc) vc.onclick=()=>setView('cards');
+      const vt=document.getElementById('view-thumbs'); if(vt) vt.onclick=()=>setView('thumbs'); try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class="empty">${e.message||e}</div>`; } }
     load();
-  </script>
+  
+</script>
 </body>
 </html>
