@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    :root { --max-w: 1120px; --fg: #0d0d0d; --muted:#666; --bg: #ffffff; --brand: #111827; --accent: #111827; --radius: 14px; }
+    :root { --max-w: 1120px; --fg: #0d0d0d; --muted: #666; --bg: #ffffff; --brand: #111827; --accent: #111827; --radius: 14px; }
     *{ box-sizing:border-box }
     html, body { margin:0; padding:0; font-family: 'Noto Sans TC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--fg); background: var(--bg); }
     a { color: inherit; text-decoration: none }
@@ -105,7 +105,7 @@
         if (sort === 'date_desc') return new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
         if (sort === 'date_asc') return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
         if (sort === 'title_asc') return String(a.title||'').localeCompare(String(b.title||''));
-        if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||'')); 
+        if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||''));
         return 0;
       });
       return out;
@@ -130,7 +130,7 @@
         const title = it.title || it.slug || '未命名';
         tpl.querySelector('.title').textContent = title;
         tpl.querySelector('.title').href = detailUrl;
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
+        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleString('zh-TW');
         tpl.querySelector('.date').textContent = dateStr;
         const tagsWrap = tpl.querySelector('.tags');
         (it.tags || []).forEach(t=>{
@@ -146,7 +146,7 @@
       document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
       document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
     }
-    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class="empty">${e.message||e}</div>`; } }
+    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
   </script>
 </body>
