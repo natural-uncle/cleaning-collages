@@ -138,7 +138,7 @@
         const title = it.title || it.slug || '未命名';
         tpl.querySelector('.title').textContent = title;
         tpl.querySelector('.title').href = detailUrl;
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleString('zh-TW');
+        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
         tpl.querySelector('.date').textContent = dateStr;
         const tagsWrap = tpl.querySelector('.tags');
         if (tagsWrap){
