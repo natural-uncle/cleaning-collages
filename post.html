@@ -53,7 +53,7 @@
     <div class="desc" id="desc"></div>
     <div class="actions">
       <a id="zip" class="ghost" href="#">下載 ZIP</a>
-<a id="firstimg" class="ghost" href="#" target="_blank" rel="noopener">連結分享</a>
+<a id="share" class="ghost" href="#" target="_blank" rel="noopener">連結分享</a>
     </div>
 
     <section class="grid" id="images"></section>
@@ -141,7 +141,7 @@ function render(slug, data){
 
   initLightbox(normalized);
 
-  const first = qsel('firstimg');
+  const first = qsel('share');
   if (first){ first.href = '#images'; first.onclick = function(e){ e.preventDefault(); openLightbox(0); }; }
 
   const grid = qsel('images'); if (grid) grid.innerHTML = '';
