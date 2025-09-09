@@ -122,7 +122,7 @@ async function load(){
 }
 
 function render(slug, data){
-  document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
+  document.title = (data.title ? data.title + '｜' : '') + '｜作品詳情';
   qsel('title').textContent = data.title || slug;
   qsel('slug').textContent = ' / ' + slug;
   const d = new Date(data.date || data.created_at || Date.now());
