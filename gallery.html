@@ -123,12 +123,12 @@
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
         const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
         const viewUrl = it.preview || it.cover || it.items?.[0]?.url || '#';
-        tpl.querySelector('.thumb').href = detailUrl;
+        tpl.querySelector('.thumb').href = viewUrl; tpl.querySelector('.thumb').target = '_blank'; tpl.querySelector('.thumb').rel='noopener';
         tpl.querySelector('.thumb').style.backgroundImage = viewUrl ? `url("${viewUrl}")` : '';
         tpl.querySelector('.thumb').style.backgroundSize = 'cover';
         tpl.querySelector('.thumb').style.backgroundPosition = 'center';
         const title = it.title || it.slug || '未命名';
-        tpl.querySelector('.title').textContent = title;
+        tpl.querySelector('.title').textContent = title; tpl.querySelector('.thumb').setAttribute('aria-label', `開啟原圖：${title}`); tpl.querySelector('.thumb').setAttribute('aria-label', `開啟原圖：${title}`);
         tpl.querySelector('.title').href = detailUrl;
         const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
         tpl.querySelector('.date').textContent = dateStr;
