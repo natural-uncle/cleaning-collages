@@ -46,6 +46,7 @@
         <img src="logo.png" alt="voxhuma">
         <span>voxhuma</span>
       </a>
+      <button id="toggleFilters" class="filter-toggle" aria-expanded="false" aria-controls="filters">篩選</button>
       <form id="filters" class="searchbar" onsubmit="event.preventDefault(); load()">
         <input id="q" type="search" placeholder="搜尋標題或標籤…" />
         <select id="sort">
@@ -96,6 +97,7 @@
   </template>
 
   <script>
+
 const PAGE_SIZE = 12;
 let showAll = false;
 let viewMode = 'cards'; // 'cards' | 'thumbs'
@@ -222,6 +224,16 @@ async function load(){
 
 // Wire UI
 (function(){
+  const tf=document.getElementById('toggleFilters');
+  if(tf){
+    let open=false; const set=(v)=>{ document.documentElement.classList.toggle('filters-open', v); tf.setAttribute('aria-expanded', String(v)); };
+    tf.onclick=()=>{ open=!open; set(open); };
+    set(false);
+  }
+})();
+
+// Wire UI
+(function(){
   const form = document.getElementById('filters');
   if (form) form.onsubmit = (e)=>{ e.preventDefault(); currentPage=1; load(); };
   const vc=document.getElementById('view-cards');
@@ -237,6 +249,7 @@ async function load(){
 })();
 
 load();
+
 </script>
 </body>
 </html>
