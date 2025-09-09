@@ -38,6 +38,20 @@
     @media (min-width: 900px){ .card{ grid-column: span 4 } }
   </style>
   <link rel="stylesheet" href="assets/styles.css">
+
+/* --- Column span override v1 --- */
+<style id="cols-override">
+  /* 12-col grid stays. Adjust card span by breakpoint to avoid giant tiles on desktop */
+  .card { grid-column: span 12; }
+  @media (min-width: 480px){ .card { grid-column: span 6; } }
+  @media (min-width: 1024px){ .card { grid-column: span 3; } } /* 4 cards per row */
+  @media (min-width: 1440px){ .card { grid-column: span 3; } } /* still 4 per row */
+
+  /* Ensure thumbs mode follows same spans */
+  .grid.thumbs .card { grid-column: span 6; }
+  @media (min-width: 768px){ .grid.thumbs .card { grid-column: span 3; } }
+</style>
+
 </head>
 <body>
   <header>
