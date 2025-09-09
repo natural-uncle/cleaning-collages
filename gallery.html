@@ -96,9 +96,6 @@
   </template>
 
   <script>
-
-
-
 const PAGE_SIZE = 12;
 let showAll = false;
 let viewMode = 'cards'; // 'cards' | 'thumbs'
@@ -113,12 +110,7 @@ async function fetchList() {
   return Array.isArray(json.items) ? json.items : [];
 }
 
-      if (!res.ok) { alert('打包下載失敗'); return; }
-      const blob = await res.blob();
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `collages_${Date.now()}.zip`; document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
-    }
-
-    function applyFilters(items){
+function applyFilters(items){
   const qEl = document.querySelector('#q');
   const sortEl = document.querySelector('#sort');
   const q = (qEl ? qEl.value : '').trim().toLowerCase();
@@ -134,17 +126,16 @@ async function fetchList() {
   }
   out.sort((a,b)=>{
     if (sort === 'date_desc') return new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
-    if (sort === 'date_asc') return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
+    if (sort === 'date_asc')  return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
     if (sort === 'title_asc') return String(a.title||'').localeCompare(String(b.title||''));
-    if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||''));
+    if (sort === 'title_desc')return String(b.title||'').localeCompare(String(a.title||''));
     return 0;
   });
   return out;
 }
 
-    }
-    function render(items){
-  try{ const c = document.getElementById('count'); if (c) c.textContent = `共 ${items.length} 筆作品`; }catch(_){}
+function render(items){
+  try{ const c=document.getElementById('count'); if(c) c.textContent=`共 ${items.length} 筆作品`; }catch(_){}
   const list = document.querySelector('#list');
   const empty = document.querySelector('#empty');
   const pager = document.querySelector('#pager');
@@ -180,23 +171,23 @@ async function fetchList() {
       titleA.href = detailUrl;
       titleA.removeAttribute('target'); titleA.removeAttribute('rel');
     }
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
-    const dateEl = tpl.querySelector('.date'); if (dateEl) dateEl.textContent = dateStr;
+    const dateEl = tpl.querySelector('.date');
+    if (dateEl){ const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW'); dateEl.textContent = dateStr; }
     const tagsWrap = tpl.querySelector('.tags');
-        const shareBtn = tpl.querySelector('.share');
-        if (shareBtn) {
-          shareBtn.onclick = async (e)=>{
-            e.preventDefault();
-            const shareUrl = new URL(detailUrl, location.href).href;
-            const data = { title, text: title, url: shareUrl };
-            try {
-              if (navigator.share) { await navigator.share(data); }
-              else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(shareUrl); alert('已複製分享連結'); }
-              else { prompt('複製此連結：', shareUrl); }
-            } catch(_) {}
-          };
-        }
-    if (tagsWrap){ (it.tags || []).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); }); }
+    if (tagsWrap){ (it.tags||[]).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); }); }
+    const shareBtn = tpl.querySelector('.share');
+    if (shareBtn){
+      shareBtn.onclick = async (e)=>{
+        e.preventDefault();
+        const shareUrl = new URL(detailUrl, location.href).href;
+        const data = { title: it.title || it.slug || '作品', text: it.title || '', url: shareUrl };
+        try{
+          if (navigator.share) { await navigator.share(data); }
+          else if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(shareUrl); alert('已複製分享連結'); }
+          else { prompt('複製此連結：', shareUrl); }
+        }catch(_){}
+      };
+    }
     list.appendChild(tpl);
   }
 
@@ -246,9 +237,6 @@ async function load(){
 })();
 
 load();
-
-
-
 </script>
 </body>
 </html>
