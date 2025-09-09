@@ -75,6 +75,7 @@
       <div class="meta">
         <div class="row">
           <a class="title" target="_blank" rel="noopener"></a>
+          <span class="muted date"></span>
         </div>
         <div class="tags"></div>
       </div>
@@ -130,8 +131,6 @@
         tpl.querySelector('.title').textContent = title;
         tpl.querySelector('.title').href = detailUrl;
         const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
-        // 日期顯示已移除時間，只顯示日期
-        // tpl.querySelector('.date').textContent = dateStr;
         tpl.querySelector('.date').textContent = dateStr;
         const tagsWrap = tpl.querySelector('.tags');
         (it.tags || []).forEach(t=>{
