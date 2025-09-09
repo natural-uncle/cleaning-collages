@@ -2,13 +2,13 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>作品詳情｜voxhuma</title>
+  <title>作品清單｜voxhuma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    :root { --max-w: 1120px; --fg:#0d0d0d; --muted:#666; --bg:#fff; --brand:#111827; --radius: 14px; }
+    :root { --max-w: 1120px; --fg: #0d0d0d; --muted:#666; --bg: #ffffff; --brand: #111827; --accent: #111827; --radius: 14px; }
     *{ box-sizing:border-box }
     html, body { margin:0; padding:0; font-family: 'Noto Sans TC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--fg); background: var(--bg); }
     a { color: inherit; text-decoration: none }
@@ -18,209 +18,136 @@
     .nav { display:flex; align-items:center; justify-content:space-between; height:64px; }
     .logo { display:flex; align-items:center; gap:10px; font-weight:800 }
     .logo img { height:40px; width:auto; max-height:40px; max-width:none; object-fit:contain; border-radius:6px }
-    main { padding:28px 0 60px }
-    .title { font-size: clamp(22px, 4vw, 36px); margin: 8px 0 8px; font-weight:800 }
+    .searchbar { display:flex; gap:10px; flex-wrap:wrap }
+    .searchbar input, .searchbar select { padding:10px 12px; border:1px solid #ddd; border-radius:10px }
+    .searchbar button { padding:10px 14px; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; border:0 }
+    main { padding: 28px 0 60px }
+    h1 { margin: 8px 0 18px; font-size: clamp(24px, 4vw, 36px); }
+    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:20px }
+    .card { grid-column: span 12; border:1px solid #eee; border-radius: var(--radius); overflow:hidden; background:#fff; display:flex; flex-direction:column }
+    .thumb { aspect-ratio: 16/9; background:#f6f6f6; display:flex; align-items:center; justify-content:center; font-size:12px; color:#999 }
+    .meta { padding:14px; display:flex; flex-direction:column; gap:6px }
+    .title { font-weight:700 }
     .muted { color:var(--muted); font-size:14px }
-    .tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap }
+    .tags { display:flex; gap:8px; flex-wrap:wrap }
     .tag { font-size:12px; padding:4px 8px; border-radius:999px; background:#f3f4f6; border:1px solid #eee }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px }
-    .btn { padding:10px 14px; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; border:0 }
-    .ghost { padding:10px 14px; border-radius:10px; border:1px solid #ddd; background:#fff }
-    .desc { margin-top:14px; line-height:1.7; color:#333 }
-
-    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:20px; margin-top:24px }
-    .card { grid-column: span 12; border:1px solid #eee; border-radius: var(--radius); overflow:hidden; background:#fff; }
-    .cap { padding:10px 12px; font-size:14px; color:#444; border-top:1px solid #f0f0f0 }
-    .meta { display:flex; align-items:center; gap:8px; color:#777; font-size:14px }
-
-    @media (min-width: 900px){ .card{ grid-column: span 6 } }
-      /* Lightbox */
-    .lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:1000}
-    .lightbox.open{display:flex}
-    .lightbox-inner{position:relative;max-width:96vw;max-height:90vh;}
-    .lightbox img{max-width:96vw;max-height:80vh;display:block;margin:0 auto;border-radius:10px}
-    .lightbox .caption{margin-top:10px;color:#f3f4f6;text-align:center}
-    .lb-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px 12px;border-radius:999px;cursor:pointer;user-select:none}
-    .lb-prev{left:-56px}
-    .lb-next{right:-56px}
-    .lb-close{position:absolute;top:-48px;right:-8px;background:rgba(255,255,255,.2);border:0;padding:8px 10px;border-radius:999px;color:#fff;cursor:pointer}
-    @media (max-width: 640px){ .lb-prev{left:8px} .lb-next{right:8px} .lb-close{top:8px;right:8px} }
+    .empty { padding:40px; text-align:center; color:#777 }
+    .pager { display:flex; justify-content:center; gap:10px; margin-top:24px }
+    .pager button { padding:8px 12px; border:1px solid #ddd; background:#fff; border-radius:10px }
+    @media (min-width: 900px){ .card{ grid-column: span 4 } }
   </style>
 </head>
 <body>
   <header>
     <div class="container nav">
-      <a class="logo" href="gallery.html">
+      <a class="logo" href="./">
         <img src="logo.png" alt="voxhuma">
         <span>voxhuma</span>
       </a>
-      <a class="ghost" href="gallery.html">回到清單</a>
+      <form id="filters" class="searchbar" onsubmit="event.preventDefault(); load()">
+        <input id="q" type="search" placeholder="搜尋標題或標籤…" />
+        <select id="sort">
+          <option value="date_desc">最新優先</option>
+          <option value="date_asc">最舊優先</option>
+          <option value="title_asc">標題 A→Z</option>
+          <option value="title_desc">標題 Z→A</option>
+        </select>
+        <button type="submit">套用</button>
+      </form>
     </div>
   </header>
 
-  <main class="container" id="main">
-    <h1 class="title" id="title">載入中…</h1>
-    <div class="meta"><span id="date"></span><span id="slug" class="muted"></span></div>
-    <div class="tags" id="tags"></div>
-    <div class="desc" id="desc"></div>
-    <div class="actions">
-      <a id="zip" class="ghost" href="#">下載 ZIP</a>
-      <a id="json" class="ghost" href="#" target="_blank" rel="noopener">查看 JSON</a>
-      <a id="firstimg" class="ghost" href="#" target="_blank" rel="noopener">查看首圖</a>
+  <main class="container">
+    <h1>作品清單</h1>
+    <div id="list" class="grid" aria-live="polite"></div>
+    <div id="pager" class="pager" hidden>
+      <button id="prev">上一頁</button>
+      <span id="pageInfo" class="muted"></span>
+      <button id="next">下一頁</button>
     </div>
-
-    <section class="grid" id="images"></section>
+    <div id="empty" class="empty" hidden>目前尚無作品</div>
   </main>
 
-  <!-- Lightbox overlay -->
-  <div id="lightbox" class="lightbox" aria-hidden="true">
-    <div class="lightbox-inner">
-      <button class="lb-close" aria-label="關閉">✕</button>
-      <button class="lb-btn lb-prev" aria-label="上一張">‹</button>
-      <img id="lb-image" alt="預覽">
-      <button class="lb-btn lb-next" aria-label="下一張">›</button>
-      <div id="lb-caption" class="caption"></div>
-    </div>
-  </div>
+  <template id="card-tpl">
+    <article class="card">
+      <a class="thumb" target="_blank" rel="noopener" aria-label="開啟作品"></a>
+      <div class="meta">
+        <div class="row">
+          <a class="title" target="_blank" rel="noopener"></a>
+        </div>
+        <div class="tags"></div>
+      </div>
+    </article>
+  </template>
 
   <script>
-    // 讓錯誤更可見，避免因 JS 失敗顯示空白
-    window.addEventListener('error', (e)=>{
-      const el = document.createElement('pre');
-      el.style.whiteSpace='pre-wrap'; el.style.background='#fff3cd'; el.style.padding='12px'; el.style.border='1px solid #ffeeba'; el.style.borderRadius='8px'; el.style.margin='12px 0';
-      el.textContent = 'Error: ' + (e.message || e.error?.message || e.filename || '');
-      document.getElementById('main').prepend(el);
-    });
-
-    function qsel(id){ return document.getElementById(id); }
-    function getSlug(){ const u=new URL(location.href); return u.searchParams.get('slug') || ''; }
-
-    async function load(){
-      const slug = getSlug();
-      if (!slug){ qsel('title').textContent = '缺少 slug 參數'; return; }
-      try{
-        const res = await fetch(`/.netlify/functions/get-post?slug=${encodeURIComponent(slug)}`);
-        if (!res.ok) throw new Error('載入作品失敗');
-        const data = await res.json();
-        render(slug, data);
-      }catch(e){
-        qsel('title').textContent = e.message || e;
-      }
+    const PAGE_SIZE = 12;
+    let currentPage = 1;
+    let lastData = [];
+    async function fetchList() {
+      const url = new URL(location.origin + '/.netlify/functions/list-posts');
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('載入作品清單失敗');
+      const json = await r.json();
+      return Array.isArray(json.items) ? json.items : [];
     }
-
-    function render(slug, data){
-      document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
-      qsel('title').textContent = data.title || slug;
-      qsel('slug').textContent = ' / ' + slug;
-      const d = new Date(data.date || data.created_at || Date.now());
-      qsel('date').textContent = d.toLocaleString('zh-TW');
-
-      const tagsWrap = qsel('tags');
-      tagsWrap.innerHTML='';
-      (data.tags||[]).forEach(t=>{
-        const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span);
+    function applyFilters(items){
+      const q = document.querySelector('#q').value.trim().toLowerCase();
+      const sort = document.querySelector('#sort').value;
+      let out = items;
+      if (q) {
+        out = out.filter(x => (x.title||'').toLowerCase().includes(q) || (x.tags||[]).some(t => t.toLowerCase().includes(q)) || (x.slug||'').toLowerCase().includes(q));
+      }
+      out = out.slice();
+      out.sort((a,b)=>{
+        if (sort === 'date_desc') return new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
+        if (sort === 'date_asc') return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
+        if (sort === 'title_asc') return String(a.title||'').localeCompare(String(b.title||''));
+        if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||''));
+        return 0;
       });
-
-      const desc = String(data.description || data.desc || '').trim();
-      qsel('desc').textContent = desc || '（此內容尚無說明）';
-
-      // 動作按鈕
-      qsel('zip').href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
-      const cloud = (data.cloud_name) || (window.CLD_CLOUD_NAME) || '';
-      if (cloud) {
-        qsel('json').href = `https://res.cloudinary.com/${cloud}/raw/upload/collages/${encodeURIComponent(slug)}/data.json`;
-      } else {
-        qsel('json').style.display = 'none';
-      }
-
-      const images = Array.isArray(data.items) ? data.items : [];
-      const grid = qsel('images');
-      grid.innerHTML = '';
-
-      if (images.length){
-        qsel('firstimg').href = '#';
-        qsel('firstimg').onclick = (e)=>{ e.preventDefault(); openLightbox(0); };
-      } else {
-        qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true');
-      }
-
-      images.forEach((it, idx)=>{
-        const card = document.createElement('article');
-        card.className = 'card';
-
-        const link = document.createElement('a');
-        link.href = it.url;
-        link.dataset.idx = String(idx);
-
-        const img = document.createElement('img');
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.src = it.url;
-        img.alt = it.alt || it.caption || data.title || slug || 'image';
-        link.appendChild(img);
-
-        // 攔截點擊改用燈箱
-        link.addEventListener('click', (e)=>{
-          e.preventDefault();
-          openLightbox(idx);
+      return out;
+    }
+    function render(items){
+      const list = document.querySelector('#list');
+      const empty = document.querySelector('#empty');
+      const pager = document.querySelector('#pager');
+      list.innerHTML = '';
+      if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
+      const start = (currentPage-1) * PAGE_SIZE;
+      const pageItems = items.slice(start, start + PAGE_SIZE);
+      const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+      for (const it of pageItems){
+        const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
+        const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
+        const viewUrl = it.preview || it.cover || it.items?.[0]?.url || '#';
+        tpl.querySelector('.thumb').href = detailUrl;
+        tpl.querySelector('.thumb').style.backgroundImage = viewUrl ? `url(\"${viewUrl}\")` : '';
+        tpl.querySelector('.thumb').style.backgroundSize = 'cover';
+        tpl.querySelector('.thumb').style.backgroundPosition = 'center';
+        const title = it.title || it.slug || '未命名';
+        tpl.querySelector('.title').textContent = title;
+        tpl.querySelector('.title').href = detailUrl;
+        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
+        // 日期顯示已移除時間，只顯示日期
+        // tpl.querySelector('.date').textContent = dateStr;
+        tpl.querySelector('.date').textContent = dateStr;
+        const tagsWrap = tpl.querySelector('.tags');
+        (it.tags || []).forEach(t=>{
+          const span = document.createElement('span');
+          span.className = 'tag'; span.textContent = t; tagsWrap.appendChild(span);
         });
-
-        card.appendChild(link);
-
-        const cap = document.createElement('div');
-        cap.className = 'cap';
-        cap.textContent = it.caption || it.alt || '';
-        card.appendChild(cap);
-
-        grid.appendChild(card);
-      });
+        list.appendChild(tpl);
+      }
+      pager.hidden = totalPages <= 1;
+      document.querySelector('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
+      document.querySelector('#prev').disabled = currentPage <= 1;
+      document.querySelector('#next').disabled = currentPage >= totalPages;
+      document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
+      document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
     }
-
-    // === Lightbox JS ===
-    let LB = { images: [], idx: 0 };
-    const lbEl = document.getElementById('lightbox');
-    const lbImg = document.getElementById('lb-image');
-    const lbCap = document.getElementById('lb-caption');
-    const btnPrev = lbEl.querySelector('.lb-prev');
-    const btnNext = lbEl.querySelector('.lb-next');
-    const btnClose = lbEl.querySelector('.lb-close');
-
-    function showImage(i){
-      if (!LB.images.length) return;
-      LB.idx = (i + LB.images.length) % LB.images.length;
-      const it = LB.images[LB.idx];
-      lbImg.src = it.url;
-      lbImg.alt = it.alt || it.caption || '';
-      lbCap.textContent = it.caption || it.alt || '';
-    }
-    function openLightbox(i){
-      document.documentElement.style.overflow = 'hidden';
-      lbEl.classList.add('open');
-      showImage(i);
-    }
-    function closeLightbox(){
-      lbEl.classList.remove('open');
-      document.documentElement.style.overflow = '';
-    }
-
-    btnPrev.addEventListener('click', ()=> showImage(LB.idx - 1));
-    btnNext.addEventListener('click', ()=> showImage(LB.idx + 1));
-    btnClose.addEventListener('click', closeLightbox);
-    lbEl.addEventListener('click', (e)=>{ if(e.target === lbEl) closeLightbox(); });
-    window.addEventListener('keydown', (e)=>{
-      if(!lbEl.classList.contains('open')) return;
-      if(e.key === 'Escape') closeLightbox();
-      if(e.key === 'ArrowLeft') showImage(LB.idx - 1);
-      if(e.key === 'ArrowRight') showImage(LB.idx + 1);
-    });
-
-    // 將 images 存進 LB，讓燈箱可用
-    const _origRender = render;
-    render = function(slug, data){
-      LB.images = Array.isArray(data.items) ? data.items : [];
-      _origRender(slug, data);
-    };
-
+    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
   </script>
 </body>
