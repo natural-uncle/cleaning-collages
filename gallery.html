@@ -59,7 +59,7 @@
   </header>
 
   <main class="container">
-    <h1>作品清單</h1>
+    <h1>作品清單</h1> <span id=\"count\" class=\"muted\"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
       <button id="prev">上一頁</button>
@@ -111,6 +111,7 @@
       return out;
     }
     function render(items){
+      try{ document.getElementById('count').textContent = `共 ${items.length} 筆作品`; }catch(_){}
       const list = document.querySelector('#list');
       const empty = document.querySelector('#empty');
       const pager = document.querySelector('#pager');
