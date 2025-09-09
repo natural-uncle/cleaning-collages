@@ -59,7 +59,7 @@
   </header>
 
   <main class="container">
-    <h1>作品清單</h1> <span id=\"count\" class=\"muted\"></span>
+    <h1>作品清單</h1> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
       <button id="prev">上一頁</button>
@@ -147,7 +147,7 @@
       document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
       document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
     }
-    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
+    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class="empty">${e.message||e}</div>`; } }
     load();
   </script>
 </body>
