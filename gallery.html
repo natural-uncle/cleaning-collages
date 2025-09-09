@@ -68,6 +68,9 @@
 
   <main class="container">
     <h1>作品清單</h1> <span id="count" class="muted"></span>
+<div class="toolbar">  <button id="viewCard" class="viewbtn" aria-pressed="true">卡片模式</button>
+  <button id="viewThumbs" class="viewbtn" aria-pressed="false">縮圖網格模式</button>
+</div> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
       <button id="prev">上一頁</button>
@@ -90,72 +93,83 @@
     </article>
   </template>
 
-  <script>
-    const PAGE_SIZE = 12;
-    let currentPage = 1;
-    let lastData = [];
-    async function fetchList() {
-      const url = new URL(location.origin + '/.netlify/functions/list-posts');
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('載入作品清單失敗');
-      const json = await r.json();
-      return Array.isArray(json.items) ? json.items : [];
+  <script>(function(){
+  const state = { items: [], page: 1, pageSize: 24, view: localStorage.getItem('view') || 'card', total: 0 };
+  const $ = (id)=>document.getElementById(id);
+  function dateOnly(v){ const d=v?new Date(v):new Date(); return d.toLocaleDateString('zh-TW'); }
+  function share(url,title){
+    try{
+      if (navigator.share) return navigator.share({title, url});
+      if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(url); alert('已複製分享連結'); return; }
+      prompt('複製此連結：', url);
+    }catch(_){}
+  }
+  function applyView(){
+    const grid=$('list'); if(!grid) return;
+    grid.classList.toggle('thumbs', state.view==='thumbs');
+    $('viewCard')&&$('viewCard').setAttribute('aria-pressed', String(state.view==='card'));
+    $('viewThumbs')&&$('viewThumbs').setAttribute('aria-pressed', String(state.view==='thumbs'));
+    localStorage.setItem('view', state.view);
+  }
+  function pageSlice(items){
+    if (state.pageSize>=99999) return items;
+    const start=(state.page-1)*state.pageSize, end=start+state.pageSize;
+    return items.slice(start,end);
+  }
+  function render(){
+    const grid=$('list'); if(!grid) return; grid.innerHTML='';
+    const pageItems=pageSlice(state.items);
+    for (let i=0;i<pageItems.length;i++){
+      const it=pageItems[i];
+      const card=document.createElement('article'); card.className='card';
+      const a=document.createElement('a'); a.href=`post.html?slug=${encodeURIComponent(it.slug||it.id||'')}`;
+      const img=document.createElement('img'); img.className='thumb'; img.alt=it.title||'';
+      img.src=(it.cover||it.thumbnail||it.image||(it.images&&it.images[0])||'').toString();
+      a.appendChild(img); card.appendChild(a);
+      const meta=document.createElement('div'); meta.className='meta';
+      meta.innerHTML=`<div class="title">${it.title||'(未命名)'}</div>
+                      <div class="date"></div>
+                      <div class="tags"></div>
+                      <div class="actions"></div>`;
+      const dateEl=meta.querySelector('.date');
+      if(dateEl){ const dsrc=it.date||it.created_at||it.updated_at||''; dateEl.textContent=dateOnly(dsrc); }
+      const tagsWrap=meta.querySelector('.tags');
+      const tags=Array.isArray(it.tags)?it.tags:(it.tags?String(it.tags).split(/[, \s]+/).map(s=>s.trim()).filter(Boolean):[]);
+      for(const t of tags){ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap&&tagsWrap.appendChild(span); }
+      const actions=meta.querySelector('.actions');
+      const shareBtn=document.createElement('button'); shareBtn.className='viewbtn'; shareBtn.type='button'; shareBtn.textContent='分享';
+      shareBtn.addEventListener('click',(e)=>{ e.preventDefault(); const url=new URL('post.html', location.href); url.searchParams.set('slug', it.slug||it.id||''); share(url.toString(), it.title||document.title); });
+      actions&&actions.appendChild(shareBtn);
+      card.appendChild(meta); grid.appendChild(card);
     }
-    function applyFilters(items){
-      const q = document.querySelector('#q').value.trim().toLowerCase();
-      const sort = document.querySelector('#sort').value;
-      let out = items;
-      if (q) {
-        out = out.filter(x => (x.title||'').toLowerCase().includes(q) || (x.tags||[]).some(t => t.toLowerCase().includes(q)) || (x.slug||'').toLowerCase().includes(q));
-      }
-      out = out.slice();
-      out.sort((a,b)=>{
-        if (sort === 'date_desc') return new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
-        if (sort === 'date_asc') return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
-        if (sort === 'title_asc') return String(a.title||'').localeCompare(String(b.title||''));
-        if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||''));
-        return 0;
-      });
-      return out;
-    }
-    function render(items){ try{ document.getElementById('count').textContent = `共 ${items.length} 筆作品`; }catch(_){} 
-      const list = document.querySelector('#list');
-      const empty = document.querySelector('#empty');
-      const pager = document.querySelector('#pager');
-      list.innerHTML = '';
-      if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
-      const start = (currentPage-1) * PAGE_SIZE;
-      const pageItems = items.slice(start, start + PAGE_SIZE);
-      const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-      for (const it of pageItems){
-        const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
-        const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
-        const viewUrl = it.preview || it.cover || it.items?.[0]?.url || '#';
-        tpl.querySelector('.thumb').href = detailUrl;
-        tpl.querySelector('.thumb').style.backgroundImage = viewUrl ? `url("${viewUrl}")` : '';
-        tpl.querySelector('.thumb').style.backgroundSize = 'cover';
-        tpl.querySelector('.thumb').style.backgroundPosition = 'center';
-        const title = it.title || it.slug || '未命名';
-        tpl.querySelector('.title').textContent = title;
-        tpl.querySelector('.title').href = detailUrl;
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
-        tpl.querySelector('.date').textContent = dateStr;
-        const tagsWrap = tpl.querySelector('.tags');
-        if (tagsWrap){
-          const tags = Array.isArray(it.tags) ? it.tags : (typeof it.tags === 'string' ? it.tags.split(/[,，\s]+/).filter(Boolean) : []);
-          tags.forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
-        }
-        list.appendChild(tpl);
-      }
-      pager.hidden = totalPages <= 1;
-      document.querySelector('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
-      document.querySelector('#prev').disabled = currentPage <= 1;
-      document.querySelector('#next').disabled = currentPage >= totalPages;
-      document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
-      document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
-    }
-    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
-    load();
-  </script>
+    if($('count')) $('count').textContent=`共 ${state.total} 筆作品`;
+    const pages = state.pageSize>=99999 ? 1 : Math.max(1, Math.ceil(state.total/state.pageSize));
+    const info=$('pageinfo'); if(info) info.textContent = state.pageSize>=99999 ? '顯示全部' : `${state.page} / ${pages}`;
+    if($('prev')) $('prev').disabled = state.page<=1 || state.pageSize>=99999;
+    if($('first')) $('first').disabled = state.page<=1 || state.pageSize>=99999;
+    if($('next')) $('next').disabled = state.page>=pages || state.pageSize>=99999;
+    if($('last')) $('last').disabled = state.page>=pages || state.pageSize>=99999;
+    if($('restorePaging')) $('restorePaging').style.display = state.pageSize>=99999 ? 'inline-flex' : 'none';
+    applyView();
+  }
+  async function fetchList(){
+    const res = await fetch('/.netlify/functions/list-posts');
+    if(!res.ok) throw new Error('清單載入失敗');
+    const data = await res.json();
+    const items = Array.isArray(data.items)?data.items:[];
+    state.items = items; state.total = items.length;
+  }
+  function wire(){
+    $('viewCard')&&$('viewCard').addEventListener('click', ()=>{ state.view='card'; render(); });
+    $('viewThumbs')&&$('viewThumbs').addEventListener('click', ()=>{ state.view='thumbs'; render(); });
+    $('prev')&&$('prev').addEventListener('click', ()=>{ if(state.page>1){ state.page--; render(); } });
+    $('next')&&$('next').addEventListener('click', ()=>{ const pages=Math.max(1, Math.ceil(state.total/state.pageSize)); if(state.page<pages){ state.page++; render(); } });
+    $('first')&&$('first').addEventListener('click', ()=>{ state.page=1; render(); });
+    $('last')&&$('last').addEventListener('click', ()=>{ const pages=Math.max(1, Math.ceil(state.total/state.pageSize)); state.page=pages; render(); });
+    $('showAll')&&$('showAll').addEventListener('click', ()=>{ state.page=1; state.pageSize=99999; render(); });
+    $('restorePaging')&&$('restorePaging').addEventListener('click', ()=>{ state.pageSize=24; state.page=1; render(); });
+  }
+  (async function init(){ try{ wire(); applyView(); await fetchList(); render(); }catch(e){ console.warn(e); } })();
+})();</script>
 </body>
 </html>
