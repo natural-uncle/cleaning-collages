@@ -85,7 +85,7 @@
       qsel('title').textContent = data.title || slug;
       qsel('slug').textContent = ' / ' + slug;
       const d = new Date(data.date || data.created_at || Date.now());
-      qsel('date').textContent = d.toLocaleString('zh-TW');
+      qsel('date').textContent = d.toLocaleDateString('zh-TW');
       const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
       (data.tags||[]).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
       const desc = String(data.description || data.desc || '').trim();
