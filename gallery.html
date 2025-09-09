@@ -88,80 +88,134 @@
   </template>
 
   <script>
+const PAGE_SIZE = 12;
+let showAll = false;
+let viewMode = 'cards'; // 'cards' | 'thumbs'
+let currentPage = 1;
+let lastData = [];
 
-    const PAGE_SIZE = 12;
-    let showAll = false;
-    let viewMode = 'cards'; // 'cards' | 'thumbs'
-    let currentPage = 1;
-    let lastData = [];
-    async function fetchList() {
-      const url = new URL(location.origin + '/.netlify/functions/list-posts');
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('載入作品清單失敗');
-      const json = await r.json();
-      return Array.isArray(json.items) ? json.items : [];
+async function fetchList() {
+  const url = new URL(location.origin + '/.netlify/functions/list-posts');
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('載入作品清單失敗');
+  const json = await r.json();
+  return Array.isArray(json.items) ? json.items : [];
+}
+
+function applyFilters(items){
+  const qEl = document.querySelector('#q');
+  const sortEl = document.querySelector('#sort');
+  const q = (qEl ? qEl.value : '').trim().toLowerCase();
+  const sort = (sortEl ? sortEl.value : 'date_desc');
+  let out = Array.isArray(items) ? items.slice() : [];
+  if (q) {
+    out = out.filter(x => {
+      const title = String(x.title||'').toLowerCase();
+      const slug = String(x.slug||'').toLowerCase();
+      const tags = Array.isArray(x.tags) ? x.tags.join(',').toLowerCase() : '';
+      return title.includes(q) || slug.includes(q) || tags.includes(q);
+    });
+  }
+  out.sort((a,b)=>{
+    if (sort === 'date_desc') return new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
+    if (sort === 'date_asc') return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
+    if (sort === 'title_asc') return String(a.title||'').localeCompare(String(b.title||''));
+    if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||''));
+    return 0;
+  });
+  return out;
+}
+
+function render(items){
+  try{ const c = document.getElementById('count'); if (c) c.textContent = `共 ${items.length} 筆作品`; }catch(_){}
+  const list = document.querySelector('#list');
+  const empty = document.querySelector('#empty');
+  const pager = document.querySelector('#pager');
+  if (!list) return;
+  list.classList.toggle('thumbs', viewMode === 'thumbs');
+  list.innerHTML = '';
+
+  if (!items.length){
+    if (empty) empty.hidden = false;
+    if (pager) pager.hidden = true;
+    return;
+  } else { if (empty) empty.hidden = true; }
+
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageItems = showAll ? items : items.slice((currentPage-1)*PAGE_SIZE, (currentPage-1)*PAGE_SIZE + PAGE_SIZE);
+
+  for (const it of pageItems){
+    const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
+    const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
+    const viewUrl = it.preview || it.cover || (it.items && it.items[0] && it.items[0].url) || '';
+    const thumb = tpl.querySelector('.thumb');
+    const titleA = tpl.querySelector('.title');
+    if (thumb){
+      thumb.href = detailUrl;
+      thumb.style.backgroundImage = viewUrl ? `url("${viewUrl}")` : '';
+      thumb.style.backgroundSize = 'cover';
+      thumb.style.backgroundPosition = 'center';
+      thumb.setAttribute('aria-label', `開啟作品：${it.title || it.slug || '未命名'}`);
+      thumb.removeAttribute('target'); thumb.removeAttribute('rel');
     }
-    function applyFilters(items){
-      const q = document.querySelector('#q').value.trim().toLowerCase();
-      const sort = document.querySelector('#sort').value;
-      let out = items;
-      if (q) {
-        out = out.filter(x => (x.title||'').toLowerCase().includes(q) || (x.tags||[]).some(t => t.toLowerCase().includes(q)) || (x.slug||'').toLowerCase().includes(q));
-      }
-      out = out.slice();
-      out.sort((a,b)=>{
-        if (sort === 'date_desc') return new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0);
-        if (sort === 'date_asc') return new Date(a.date || a.created_at || 0) - new Date(b.date || b.created_at || 0);
-        if (sort === 'title_asc') return String(a.title||'').localeCompare(String(b.title||''));
-        if (sort === 'title_desc') return String(b.title||'').localeCompare(String(a.title||''));
-        return 0;
-      });
-      return out;
+    if (titleA){
+      titleA.textContent = it.title || it.slug || '未命名';
+      titleA.href = detailUrl;
+      titleA.removeAttribute('target'); titleA.removeAttribute('rel');
     }
-    function render(items){
-      const list = document.querySelector('#list');
-      list.classList.toggle('thumbs', viewMode==='thumbs');
-      try{ document.getElementById('count').textContent = `共 ${items.length} 筆作品`; }catch(_){}
-      const list = document.querySelector('#list');
-      const empty = document.querySelector('#empty');
-      const pager = document.querySelector('#pager');
-      list.innerHTML = '';
-      if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
-      const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-      const pageItems = showAll ? items : (items.slice((currentPage-1)*PAGE_SIZE, (currentPage-1)*PAGE_SIZE + PAGE_SIZE));
-      for (const it of pageItems){
-        const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
-        const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
-        const viewUrl = it.preview || it.cover || it.items?.[0]?.url || '#';
-        tpl.querySelector('.thumb').href = detailUrl;
-        tpl.querySelector('.thumb').style.backgroundImage = viewUrl ? `url("${viewUrl}")` : '';
-        tpl.querySelector('.thumb').style.backgroundSize = 'cover';
-        tpl.querySelector('.thumb').style.backgroundPosition = 'center';
-        const title = it.title || it.slug || '未命名';
-        tpl.querySelector('.title').textContent = title;
-        tpl.querySelector('.title').href = detailUrl;
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
-        tpl.querySelector('.date').textContent = dateStr;
-        const tagsWrap = tpl.querySelector('.tags');
-        (it.tags || []).forEach(t=>{
-          const span = document.createElement('span');
-          span.className = 'tag'; span.textContent = t; tagsWrap.appendChild(span);
-        });
-        list.appendChild(tpl);
-      }
-      pager.hidden = showAll ? false : (totalPages <= 1);
-      document.querySelector('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
-      document.querySelector('#prev').disabled = currentPage <= 1;
-      document.querySelector('#next').disabled = currentPage >= totalPages;
-      document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
-      document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
-    }
-    async function load(){
-      const setView = (mode)=>{ viewMode = mode; const a=document.getElementById('view-cards'); const b=document.getElementById('view-thumbs'); if(a&&b){ a.setAttribute('aria-pressed', String(mode==='cards')); b.setAttribute('aria-pressed', String(mode==='thumbs')); } render(applyFilters(lastData)); };
-      const vc=document.getElementById('view-cards'); if(vc) vc.onclick=()=>setView('cards');
-      const vt=document.getElementById('view-thumbs'); if(vt) vt.onclick=()=>setView('thumbs'); try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class="empty">${e.message||e}</div>`; } }
-    load();
-  
+    const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
+    const dateEl = tpl.querySelector('.date'); if (dateEl) dateEl.textContent = dateStr;
+    const tagsWrap = tpl.querySelector('.tags');
+    if (tagsWrap){ (it.tags || []).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); }); }
+    list.appendChild(tpl);
+  }
+
+  if (pager){
+    pager.hidden = showAll ? false : (totalPages <= 1);
+    const pageInfo = document.querySelector('#pageInfo');
+    if (pageInfo) pageInfo.textContent = showAll ? `顯示全部（${items.length} 筆）` : `${currentPage} / ${totalPages}`;
+    const prevBtn = document.querySelector('#prev');
+    const nextBtn = document.querySelector('#next');
+    const firstBtn = document.querySelector('#first');
+    const lastBtn = document.querySelector('#last');
+    if (prevBtn) { prevBtn.disabled = currentPage <= 1; prevBtn.onclick = ()=>{ if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } }; }
+    if (nextBtn) { nextBtn.disabled = currentPage >= totalPages; nextBtn.onclick = ()=>{ if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } }; }
+    if (firstBtn) firstBtn.onclick = ()=>{ currentPage = 1; render(applyFilters(lastData)); };
+    if (lastBtn)  lastBtn.onclick  = ()=>{ currentPage = totalPages; render(applyFilters(lastData)); };
+    const showAllBtn = document.querySelector('#showall');
+    if (showAllBtn) { showAllBtn.textContent = showAll ? '恢復分頁' : '顯示全部'; showAllBtn.onclick = ()=>{ showAll = !showAll; currentPage = 1; render(applyFilters(lastData)); }; }
+  }
+}
+
+async function load(){
+  try {
+    if (!lastData.length) lastData = await fetchList();
+    const items = applyFilters(lastData);
+    currentPage = Math.min(currentPage, Math.max(1, Math.ceil(Math.max(1, items.length) / PAGE_SIZE)));
+    render(items);
+  } catch(e){
+    const list = document.querySelector('#list');
+    if (list) list.innerHTML = `<div class="empty">${e.message||e}</div>`;
+  }
+}
+
+// Wire UI
+(function(){
+  const form = document.getElementById('filters');
+  if (form) form.onsubmit = (e)=>{ e.preventDefault(); currentPage=1; load(); };
+  const vc=document.getElementById('view-cards');
+  const vt=document.getElementById('view-thumbs');
+  function setView(mode){
+    viewMode = mode;
+    if (vc) vc.setAttribute('aria-pressed', String(mode==='cards'));
+    if (vt) vt.setAttribute('aria-pressed', String(mode==='thumbs'));
+    render(applyFilters(lastData));
+  }
+  if (vc) vc.onclick = ()=>setView('cards');
+  if (vt) vt.onclick = ()=>setView('thumbs');
+})();
+
+load();
 </script>
 </body>
 </html>
