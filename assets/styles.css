@@ -50,13 +50,13 @@
 /* Earlier two-column breakpoint for small phones */
 @media (min-width: 400px){
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) }
-}
+
 @media (min-width: 760px){
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) }
-}
+
 @media (min-width: 1024px){
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)) }
-}
+
 /* Filter toggle button base style */
 .filter-toggle {
   display: none;
@@ -79,15 +79,15 @@
 
 /* Responsive columns override (authoritative) */
 .grid { grid-template-columns: repeat(1, minmax(0, 1fr)) }
-@media (min-width: 480px){ .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } }
-@media (min-width: 768px){ .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
-@media (min-width: 1200px){ .grid { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
+@media (min-width: 480px){ .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } 
+@media (min-width: 768px){ .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) } 
+@media (min-width: 1200px){ .grid { grid-template-columns: repeat(4, minmax(0, 1fr)) } 
 
 
 /* --- Desktop columns override v3 --- */
 @media (min-width: 1024px){
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-}
+
 @media (min-width: 1280px){
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
-}
+
