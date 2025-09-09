@@ -62,7 +62,11 @@
 
   <script>
 function qsel(id){ return document.getElementById(id); }
-let LB_IMAGES = []; let LB_INDEX = 0;
+
+// === Lightbox ===
+let LB_IMAGES = [];
+let LB_INDEX = 0;
+
 function initLightbox(images){
   LB_IMAGES = Array.isArray(images) ? images.slice() : [];
   const overlay = qsel('lightbox-overlay');
@@ -72,9 +76,10 @@ function initLightbox(images){
   const closeBtn = qsel('lb-close');
   const prevBtn = qsel('lb-prev');
   const nextBtn = qsel('lb-next');
+
   function update(){
     const it = LB_IMAGES[LB_INDEX] || {};
-    img.src = it.url || '';
+    img.src = it.url || it.src || '';
     img.alt = it.alt || '';
     cap.textContent = it.caption || it.alt || '';
     count.textContent = (LB_INDEX+1) + ' / ' + LB_IMAGES.length;
@@ -88,18 +93,117 @@ function initLightbox(images){
   function close(){ overlay.style.display = 'none'; }
   function prev(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX - 1 + LB_IMAGES.length) % LB_IMAGES.length; update(); } }
   function next(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX + 1) % LB_IMAGES.length; update(); } }
-  closeBtn.onclick = close; prevBtn.onclick = prev; nextBtn.onclick = next;
-  overlay.addEventListener('click', function(e){ const dialog=document.getElementById('lb-dialog'); if(e.target===overlay || !dialog.contains(e.target)) close(); });
+
+  closeBtn.onclick = close;
+  prevBtn.onclick = prev;
+  nextBtn.onclick = next;
+  overlay.addEventListener('click', function(e){
+    const dialog = qsel('lb-dialog');
+    if (e.target === overlay || !dialog.contains(e.target)) close();
+  });
   document.addEventListener('keydown', function(e){
-    if (overlay.style.display !== 'flex') return;
-    if (e.key === 'Escape') close();
-    if (e.key === 'ArrowLeft') prev();
-    if (e.key === 'ArrowRight') next();
+    if (overlay.style.display === 'flex'){
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft') prev();
+      if (e.key === 'ArrowRight') next();
+    }
   });
 }
 
+// === Data helpers ===
+function getSlug(){
+  return (new URL(location.href)).searchParams.get('slug') || '';
+}
+function toArray(x){
+  if (Array.isArray(x)) return x;
+  if (x == null) return [];
+  return [x];
+}
+function tagArray(t){
+  if (Array.isArray(t)) return t;
+  if (!t) return [];
+  return String(t).split(/[,\s]+/).map(s=>s.trim()).filter(Boolean);
+}
+
+// === Render ===
+function render(slug, data){
+  // Header
+  document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
+  qsel('title').textContent = data.title || slug;
+  qsel('slug').textContent = ' / ' + slug;
+  const d = new Date(data.date || data.created_at || Date.now());
+  qsel('date').textContent = d.toLocaleDateString('zh-TW');
+  // Tags
+  const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
+  for (const t of tagArray(data.tags)){
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.textContent = t;
+    tagsWrap.appendChild(span);
+  }
+  // Desc
+  const desc = String(data.description || data.desc || '').trim();
+  qsel('desc').textContent = desc || '（此內容尚無說明）';
+
+  // Images collection: support items/images/photos fields
+  let images = [];
+  if (Array.isArray(data.items)) images = data.items;
+  else if (Array.isArray(data.images)) images = data.images;
+  else if (Array.isArray(data.photos)) images = data.photos;
+  else images = toArray(data.items || data.images || data.photos);
+
+  // Normalize each image object
+  images = images.map(it => {
+    if (typeof it === 'string') return { url: it };
+    return {
+      url: it.url || it.src || it.href || '',
+      alt: it.alt || it.caption || '',
+      caption: it.caption || ''
+    };
+  });
+
+  // Build grid
+  const grid = qsel('grid');
+  grid.innerHTML = '';
+  images.forEach((it, i) => {
+    const card = document.createElement('article');
+    card.className = 'card';
+    const a = document.createElement('a');
+    a.href = it.url;
+    a.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); });
+    const img = document.createElement('img');
+    img.src = it.url; img.alt = it.alt || '';
+    img.style.width = '100%'; img.style.display = 'block'; img.style.borderRadius = '12px';
+    a.appendChild(img);
+    card.appendChild(a);
+    grid.appendChild(card);
+  });
+
+  // First image link
+  if (images.length){
+    const fi = qsel('firstimg');
+    if (fi){ fi.href = '#'; fi.onclick = function(e){ e.preventDefault(); openLightbox(0); }; }
+  }
+
+  // Lightbox init
+  initLightbox(images);
+
+  // ZIP link
+  try{
+    var z = qsel('zip');
+    if (z) {
+      z.href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
+      z.setAttribute('download','');
+      z.onclick = null;
+      z.removeAttribute('target');
+      z.removeAttribute('rel');
+    }
+  }catch(_){}
+}
+
+// === Load ===
 async function load(){
-  const slug = (new URL(location.href)).searchParams.get('slug') || '';
+  const slug = getSlug();
   try{
     const res = await fetch(`/.netlify/functions/get-post?slug=${encodeURIComponent(slug)}`);
     if (!res.ok) throw new Error('載入作品失敗');
@@ -107,48 +211,6 @@ async function load(){
     render(slug, data);
   }catch(e){
     qsel('title').textContent = e.message || e;
-  }
-}
-
-function render(slug, data){
-  
-  try{
-    var z = qsel('zip');
-    if (z) {
-      z.href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
-      z.setAttribute('download','');
-      z.onclick = null;
-      z.removeAttribute('target'); z.removeAttribute('rel');
-    }
-  }catch(_){}
-document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
-  qsel('title').textContent = data.title || slug;
-  qsel('slug').textContent = ' / ' + slug;
-  const d = new Date(data.date || data.created_at || Date.now());
-  qsel('date').textContent = d.toLocaleDateString('zh-TW');
-  const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
-  (Array.isArray(data.tags) ? data.tags : (data.tags ? String(data.tags).split(/[,\s]+/).map(s=>s.trim()).filter(Boolean) : []))
-  .forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; (qsel('tags')||document.body).appendChild(span); }); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
-  const desc = String(data.description || data.desc || '').trim();
-  qsel('desc').textContent = desc || '（此內容尚無說明）';
-
-  const images = Array.isArray(data.items) ? data.items : (data.items ? [data.items] : []);
-  initLightbox(images);
-
-  const grid = qsel('images'); grid.innerHTML = '';
-  if (images.length){
-    const first = qsel('firstimg');
-    if (first){ first.href = '#images'; first.onclick = function(e){ e.preventDefault(); openLightbox(0); }; }
-  }
-
-  for (let i = 0; i < images.length; i++){
-    const it = images[i];
-    const card = document.createElement('article'); card.className='card';
-    const link = document.createElement('a'); link.href = it.url; link.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); });
-    const img = document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.src=it.url; img.alt=it.alt||'';
-    link.appendChild(img); card.appendChild(link);
-    const cap = document.createElement('div'); cap.className='cap'; cap.textContent = it.caption || it.alt || '';
-    card.appendChild(cap); grid.appendChild(card);
   }
 }
 
