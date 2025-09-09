@@ -111,7 +111,17 @@ async function load(){
 }
 
 function render(slug, data){
-  document.title = (data.title ? data.title + '｜' : '') + '作品詳情';
+  
+  try{
+    var z = qsel('zip');
+    if (z) {
+      z.href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
+      z.setAttribute('download','');
+      z.onclick = null;
+      z.removeAttribute('target'); z.removeAttribute('rel');
+    }
+  }catch(_){}
+document.title = (data.title ? data.title + '｜' : '') + '作品詳情';
   qsel('title').textContent = data.title || slug;
   qsel('slug').textContent = ' / ' + slug;
   const d = new Date(data.date || data.created_at || Date.now());
