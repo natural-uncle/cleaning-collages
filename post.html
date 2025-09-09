@@ -61,12 +61,16 @@
   </main>
 
   <script>
+function setText(id, text){ var el = qsel(id); if (el) el.textContent = text; }
+function setHTML(id, html){ var el = qsel(id); if (el) el.innerHTML = html; }
+function clearHTML(id){ var el = qsel(id); if (el) el.innerHTML = ''; }
+
+// Utilities
 function qsel(id){ return document.getElementById(id); }
+function getSlug(){ return (new URL(location.href)).searchParams.get('slug') || ''; }
 
-// === Lightbox ===
-let LB_IMAGES = [];
-let LB_INDEX = 0;
-
+// Lightbox
+let LB_IMAGES = []; let LB_INDEX = 0;
 function initLightbox(images){
   LB_IMAGES = Array.isArray(images) ? images.slice() : [];
   const overlay = qsel('lightbox-overlay');
@@ -79,7 +83,7 @@ function initLightbox(images){
 
   function update(){
     const it = LB_IMAGES[LB_INDEX] || {};
-    img.src = it.url || it.src || '';
+    img.src = it.url || '';
     img.alt = it.alt || '';
     cap.textContent = it.caption || it.alt || '';
     count.textContent = (LB_INDEX+1) + ' / ' + LB_IMAGES.length;
@@ -94,12 +98,12 @@ function initLightbox(images){
   function prev(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX - 1 + LB_IMAGES.length) % LB_IMAGES.length; update(); } }
   function next(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX + 1) % LB_IMAGES.length; update(); } }
 
-  closeBtn.onclick = close;
-  prevBtn.onclick = prev;
-  nextBtn.onclick = next;
+  if (closeBtn) closeBtn.onclick = close;
+  if (prevBtn) prevBtn.onclick = prev;
+  if (nextBtn) nextBtn.onclick = next;
   overlay.addEventListener('click', function(e){
     const dialog = qsel('lb-dialog');
-    if (e.target === overlay || !dialog.contains(e.target)) close();
+    if (e.target === overlay || (dialog && !dialog.contains(e.target))) close();
   });
   document.addEventListener('keydown', function(e){
     if (overlay.style.display === 'flex'){
@@ -110,98 +114,62 @@ function initLightbox(images){
   });
 }
 
-// === Data helpers ===
-function getSlug(){
-  return (new URL(location.href)).searchParams.get('slug') || '';
-}
-function toArray(x){
-  if (Array.isArray(x)) return x;
-  if (x == null) return [];
-  return [x];
-}
-function tagArray(t){
-  if (Array.isArray(t)) return t;
-  if (!t) return [];
-  return String(t).split(/[,\s]+/).map(s=>s.trim()).filter(Boolean);
-}
-
-// === Render ===
+// Render
 function render(slug, data){
-  // Header
+  // meta
   document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
-  qsel('title').textContent = data.title || slug;
-  qsel('slug').textContent = ' / ' + slug;
+  if (qsel('title')) setText('title', data.title || slug);
+  if (qsel('slug')) setText('slug', ' / ' + slug);
   const d = new Date(data.date || data.created_at || Date.now());
-  qsel('date').textContent = d.toLocaleDateString('zh-TW');
-  // Tags
-  const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
-  for (const t of tagArray(data.tags)){
-    const span = document.createElement('span');
-    span.className = 'tag';
-    span.textContent = t;
-    tagsWrap.appendChild(span);
-  }
-  // Desc
-  const desc = String(data.description || data.desc || '').trim();
-  qsel('desc').textContent = desc || '（此內容尚無說明）';
+  if (qsel('date')) setText('date', d.toLocaleDateString('zh-TW'));
 
-  // Images collection: support items/images/photos fields
-  let images = [];
-  if (Array.isArray(data.items)) images = data.items;
-  else if (Array.isArray(data.images)) images = data.images;
-  else if (Array.isArray(data.photos)) images = data.photos;
-  else images = toArray(data.items || data.images || data.photos);
-
-  // Normalize each image object
-  images = images.map(it => {
-    if (typeof it === 'string') return { url: it };
-    return {
-      url: it.url || it.src || it.href || '',
-      alt: it.alt || it.caption || '',
-      caption: it.caption || ''
-    };
-  });
-
-  // Build grid
-  const grid = qsel('grid');
-  grid.innerHTML = '';
-  images.forEach((it, i) => {
-    const card = document.createElement('article');
-    card.className = 'card';
-    const a = document.createElement('a');
-    a.href = it.url;
-    a.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); });
-    const img = document.createElement('img');
-    img.src = it.url; img.alt = it.alt || '';
-    img.style.width = '100%'; img.style.display = 'block'; img.style.borderRadius = '12px';
-    a.appendChild(img);
-    card.appendChild(a);
-    grid.appendChild(card);
-  });
-
-  // First image link
-  if (images.length){
-    const fi = qsel('firstimg');
-    if (fi){ fi.href = '#'; fi.onclick = function(e){ e.preventDefault(); openLightbox(0); }; }
+  // tags
+  const tagsWrap = qsel('tags'); if (tagsWrap) tagsWrap.innerHTML = '';
+  const tagsArr = Array.isArray(data.tags) ? data.tags
+                : (data.tags ? String(data.tags).split(/[, \s]+/).map(s=>s.trim()).filter(Boolean) : []);
+  for (const t of tagsArr){
+    const el = document.createElement('span'); el.className = 'tag'; el.textContent = t;
+    tagsWrap && tagsWrap.appendChild(el);
   }
 
-  // Lightbox init
-  initLightbox(images);
+  // images
+  const images = Array.isArray(data.items) ? data.items : (data.items ? [data.items] : []);
+  const normalized = images.map(x => ({
+    url: x.url || x.src || '',
+    alt: x.alt || x.caption || '',
+    caption: x.caption || ''
+  })).filter(x => x.url);
 
-  // ZIP link
+  initLightbox(normalized);
+
+  const first = qsel('firstimg');
+  if (first){ first.href = '#images'; first.onclick = function(e){ e.preventDefault(); openLightbox(0); }; }
+
+  const grid = qsel('images'); if (grid) grid.innerHTML = '';
+  for (let i = 0; i < normalized.length; i++){
+    const it = normalized[i];
+    const card = document.createElement('article'); card.className = 'card';
+    const link = document.createElement('a'); link.href = it.url; link.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); });
+    const img = document.createElement('img'); img.loading = 'lazy'; img.alt = it.alt || ''; img.src = it.url;
+    link.appendChild(img); card.appendChild(link);
+    const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = it.caption || it.alt || '';
+    card.appendChild(cap);
+    if (grid) grid.appendChild(card);
+  }
+
+  // zip link
   try{
     var z = qsel('zip');
     if (z) {
       z.href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
       z.setAttribute('download','');
       z.onclick = null;
-      z.removeAttribute('target');
-      z.removeAttribute('rel');
+      z.removeAttribute('target'); z.removeAttribute('rel');
     }
   }catch(_){}
 }
 
-// === Load ===
+// Load
 async function load(){
   const slug = getSlug();
   try{
@@ -210,11 +178,12 @@ async function load(){
     const data = await res.json();
     render(slug, data);
   }catch(e){
-    qsel('title').textContent = e.message || e;
+    if (qsel('title')) setText('title', e.message || e);
   }
 }
 
 load();
+
 </script>
 <div id="lightbox-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:1000;">
     <button id="lb-close" aria-label="關閉" style="position:absolute;top:8px;right:8px;padding:12px 14px;border:1px solid #666;background:#111;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:16px;z-index:1001">✕</button>
