@@ -95,22 +95,10 @@
       if (cloud) { qsel('json').href = `https://res.cloudinary.com/${cloud}/raw/upload/collages/${encodeURIComponent(slug)}/data.json`; } else { qsel('json').style.display='none'; }
       const images = Array.isArray(data.items) ? data.items : [];
       const grid = qsel('images'); grid.innerHTML = '';
-      if (images.length){ qsel('firstimg').href = '#'; qsel('firstimg').onclick = function(e){ e.preventDefault(); openLightbox(0); }; }; } else { qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true'); } else { qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true'); }
-      for (let i = 0; i < images.length; i++) { const it = images[i]; const card=document.createElement('article'); card.className='card'; const link=document.createElement('a'); link.href=it.url; link.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); }); const img=document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.src=it.url; img.alt=it.alt || it.caption || data.title || slug || 'image'; link.appendChild(img); card.appendChild(link); const cap=document.createElement('div'); cap.className='cap'; cap.textContent=it.caption || it.alt || ''; card.appendChild(cap); grid.appendChild(card); }
+      if (images.length){ qsel('firstimg').href = images[0].url; } else { qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true'); }
+      for (const it of images){ const card=document.createElement('article'); card.className='card'; const link=document.createElement('a'); link.href=it.url; link.target='_blank'; link.rel='noopener'; const img=document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.src=it.url; img.alt=it.alt || it.caption || data.title || slug || 'image'; link.appendChild(img); card.appendChild(link); const cap=document.createElement('div'); cap.className='cap'; cap.textContent=it.caption || it.alt || ''; card.appendChild(cap); grid.appendChild(card); }
     }
     load();
   </script>
-
-  <div id="lightbox-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:1000;">
-    <button id="lb-close" aria-label="關閉" style="position:absolute;top:18px;right:18px;padding:10px 12px;border:1px solid #444;background:#111;color:#fff;border-radius:10px;cursor:pointer">關閉</button>
-    <button id="lb-prev" aria-label="上一張" style="position:absolute;left:18px;top:50%;transform:translateY(-50%);padding:10px 12px;border:1px solid #444;background:#111;color:#fff;border-radius:10px;cursor:pointer">‹</button>
-    <button id="lb-next" aria-label="下一張" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);padding:10px 12px;border:1px solid #444;background:#111;color:#fff;border-radius:10px;cursor:pointer">›</button>
-    <figure style="max-width:92vw;max-height:86vh;margin:0;text-align:center">
-      <img id="lb-img" alt="" style="max-width:92vw;max-height:78vh;border-radius:12px;display:block;margin:0 auto" />
-      <figcaption id="lb-cap" style="color:#bbb;font-size:14px;margin-top:10px"></figcaption>
-      <div id="lb-count" style="color:#888;font-size:12px;margin-top:4px"></div>
-    </figure>
-  </div>
-
 </body>
 </html>
