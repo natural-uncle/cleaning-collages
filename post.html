@@ -33,6 +33,7 @@
     .meta { display:flex; align-items:center; gap:8px; color:#777; font-size:14px }
     @media (min-width: 900px){ .card{ grid-column: span 6 } }
   </style>
+  <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <header>
@@ -60,115 +61,59 @@
   </main>
 
   <script>
-window.addEventListener('error', (e)=>{
-  const el = document.createElement('pre');
-  el.style.whiteSpace='pre-wrap'; el.style.background='#fff3cd'; el.style.padding='10px'; el.style.border='1px solid #ffeeba';
-  el.style.borderRadius='8px'; el.style.margin='12px 0';
-  el.textContent = 'Error: ' + (e.message || e.error?.message || e.filename || '');
-  document.getElementById('main').prepend(el);
-});
-function qsel(id){ return document.getElementById(id); }
-function getSlug(){ const u=new URL(location.href); return u.searchParams.get('slug') || ''; }
-
-// Lightbox
-let LB_IMAGES = []; let LB_INDEX = 0;
-function initLightbox(images){
-  LB_IMAGES = Array.isArray(images) ? images.slice() : [];
-  const overlay = document.getElementById('lightbox-overlay');
-  const img = document.getElementById('lb-img');
-  const cap = document.getElementById('lb-cap');
-  const count = document.getElementById('lb-count');
-  const closeBtn = document.getElementById('lb-close');
-  const prevBtn = document.getElementById('lb-prev');
-  const nextBtn = document.getElementById('lb-next');
-  function update(){
-    const it = LB_IMAGES[LB_INDEX] || {};
-    img.src = it.url || '';
-    img.alt = it.alt || '';
-    cap.textContent = it.caption || it.alt || '';
-    count.textContent = (LB_INDEX+1) + ' / ' + LB_IMAGES.length;
-  }
-  window.openLightbox = function(i){
-    if (!LB_IMAGES.length) return;
-    LB_INDEX = Math.max(0, Math.min(i|0, LB_IMAGES.length-1));
-    update();
-    overlay.style.display = 'flex';
-  };
-  function close(){ overlay.style.display = 'none'; }
-  function prev(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX - 1 + LB_IMAGES.length) % LB_IMAGES.length; update(); } }
-  function next(){ if (LB_IMAGES.length){ LB_INDEX = (LB_INDEX + 1) % LB_IMAGES.length; update(); } }
-  closeBtn.onclick = close; prevBtn.onclick = prev; nextBtn.onclick = next;
-  overlay.addEventListener('click', function(e){ if (e.target === overlay) close(); });
-  document.addEventListener('keydown', function(e){
-    if (overlay.style.display === 'flex'){
-      if (e.key === 'Escape') close();
-      if (e.key === 'ArrowLeft') prev();
-      if (e.key === 'ArrowRight') next();
+    window.addEventListener('error', (e)=>{
+      const el = document.createElement('pre');
+      el.style.whiteSpace='pre-wrap'; el.style.background='#fff3cd'; el.style.padding='12px'; el.style.border='1px solid #ffeeba'; el.style.borderRadius='8px'; el.style.margin='12px 0';
+      el.textContent = 'Error: ' + (e.message || e.error?.message || e.filename || '');
+      document.getElementById('main').prepend(el);
+    });
+    function qsel(id){ return document.getElementById(id); }
+    function getSlug(){ const u=new URL(location.href); return u.searchParams.get('slug') || ''; }
+    async function load(){
+      const slug = getSlug();
+      if (!slug){ qsel('title').textContent = '缺少 slug 參數'; return; }
+      try{
+        const res = await fetch(`/.netlify/functions/get-post?slug=${encodeURIComponent(slug)}`);
+        if (!res.ok) throw new Error('載入作品失敗');
+        const data = await res.json();
+        render(slug, data);
+      }catch(e){
+        qsel('title').textContent = e.message || e;
+      }
     }
-  });
-}
-
-async function load(){
-  const slug = getSlug();
-  if (!slug){ qsel('title').textContent = '缺少 slug 參數'; return; }
-  try{
-    const res = await fetch(`/.netlify/functions/get-post?slug=${encodeURIComponent(slug)}`);
-    if (!res.ok) throw new Error('載入作品失敗');
-    const data = await res.json();
-    render(slug, data);
-  }catch(e){
-    qsel('title').textContent = e.message || e;
-  }
-}
-
-function render(slug, data){
-  document.title = (data.title ? data.title + '｜' : '') + '作品詳情';
-  qsel('title').textContent = data.title || slug;
-  qsel('slug').textContent = ' / ' + slug;
-  const d = new Date(data.date || data.created_at || Date.now());
-  qsel('date').textContent = d.toLocaleDateString('zh-TW');
-  const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
-  (data.tags||[]).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
-  const desc = String(data.description || data.desc || '').trim();
-  qsel('desc').textContent = desc || '（此內容尚無說明）';
-  qsel('zip').href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
-  const cloud = (data.cloud_name) || (window.CLD_CLOUD_NAME) || '';
-  if (cloud) { qsel('json').href = `https://res.cloudinary.com/${cloud}/raw/upload/collages/${encodeURIComponent(slug)}/data.json`; }
-  else { qsel('json').style.display='none'; }
-
-  const images = Array.isArray(data.items) ? data.items : [];
-  initLightbox(images);
-  const grid = qsel('images'); grid.innerHTML = '';
-  if (images.length){
-    qsel('firstimg').href = '#images';
-    qsel('firstimg').onclick = function(e){ e.preventDefault(); openLightbox(0); };
-  } else {
-    qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true');
-  }
-  for (let i = 0; i < images.length; i++){
-    const it = images[i];
-    const card = document.createElement('article'); card.className='card';
-    const link = document.createElement('a'); link.href = it.url; link.setAttribute('data-lb','1'); link.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); });
-    const img = document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.src=it.url; img.alt=it.alt||'';
-    link.appendChild(img); card.appendChild(link);
-    const cap = document.createElement('div'); cap.className='cap'; cap.textContent = it.caption || it.alt || '';
-    card.appendChild(cap); grid.appendChild(card);
-  }
-}
-
-load();
-</script>
-
-  <div id="lightbox-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:1000;">
-    <button id="lb-close" aria-label="關閉" style="position:absolute;top:18px;right:18px;padding:10px 12px;border:1px solid #444;background:#111;color:#fff;border-radius:10px;cursor:pointer">關閉</button>
-    <button id="lb-prev" aria-label="上一張" style="position:absolute;left:18px;top:50%;transform:translateY(-50%);padding:10px 12px;border:1px solid #444;background:#111;color:#fff;border-radius:10px;cursor:pointer">‹</button>
-    <button id="lb-next" aria-label="下一張" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);padding:10px 12px;border:1px solid #444;background:#111;color:#fff;border-radius:10px;cursor:pointer">›</button>
-    <figure style="max-width:92vw;max-height:86vh;margin:0;text-align:center">
-      <img id="lb-img" alt="" style="max-width:92vw;max-height:78vh;border-radius:12px;display:block;margin:0 auto" />
-      <figcaption id="lb-cap" style="color:#bbb;font-size:14px;margin-top:10px"></figcaption>
-      <div id="lb-count" style="color:#888;font-size:12px;margin-top:4px"></div>
-    </figure>
+    function render(slug, data){
+      document.title = (data.title ? data.title + '｜' : '') + '作品詳情';
+      qsel('title').textContent = data.title || slug;
+      qsel('slug').textContent = ' / ' + slug;
+      const d = new Date(data.date || data.created_at || Date.now());
+      qsel('date').textContent = d.toLocaleString('zh-TW');
+      const tagsWrap = qsel('tags'); tagsWrap.innerHTML='';
+      (data.tags||[]).forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
+      const desc = String(data.description || data.desc || '').trim();
+      qsel('desc').textContent = desc || '（此內容尚無說明）';
+      qsel('zip').href = `/.netlify/functions/zip-images?slug=${encodeURIComponent(slug)}`;
+      const cloud = (data.cloud_name) || (window.CLD_CLOUD_NAME) || '';
+      if (cloud) { qsel('json').href = `https://res.cloudinary.com/${cloud}/raw/upload/collages/${encodeURIComponent(slug)}/data.json`; } else { qsel('json').style.display='none'; }
+      const images = Array.isArray(data.items) ? data.items : [];
+      const grid = qsel('images'); grid.innerHTML = '';
+      if (images.length){ qsel('firstimg').href = images[0].url; } else { qsel('firstimg').href = '#'; qsel('firstimg').setAttribute('aria-disabled','true'); }
+      for (const it of images){ const card=document.createElement('article'); card.className='card'; const img=document.createElement('img'); img.loading='lazy'; img.decoding='async'; img.src=it.url; img.alt=it.alt || it.caption || data.title || slug || 'image'; card.appendChild(img); const cap=document.createElement('div'); cap.className='cap'; cap.textContent=it.caption || it.alt || ''; card.appendChild(cap); grid.appendChild(card); }
+    }
+    load();
+  </script>
+<div id="lightbox-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:1000;">
+    <div id="lb-dialog" style="position:relative;max-width:94vw;max-height:92vh;display:flex;flex-direction:column;align-items:center;">
+      <button id="lb-close" aria-label="關閉" style="position:absolute;top:12px;right:12px;padding:10px 12px;border:1px solid #666;background:#111;color:#fff;border-radius:12px;cursor:pointer;font-weight:700">關閉 ✕</button>
+      <figure style="max-width:94vw;max-height:84vh;margin:0;text-align:center">
+        <img id="lb-img" alt="" style="max-width:94vw;max-height:72vh;border-radius:12px;display:block;margin:0 auto" />
+        <figcaption id="lb-cap" style="color:#ddd;font-size:16px;margin-top:10px"></figcaption>
+        <div id="lb-count" style="color:#bbb;font-size:13px;margin-top:4px"></div>
+      </figure>
+      <div id="lb-bar" style="margin-top:10px;display:none;gap:12px">
+        <button id="lb-prev" aria-label="上一張" style="padding:12px 16px;border:1px solid #666;background:#111;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:18px">⟨ 上一張</button>
+        <button id="lb-next" aria-label="下一張" style="padding:12px 16px;border:1px solid #666;background:#111;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:18px">下一張 ⟩</button>
+      </div>
+    </div>
   </div>
-
 </body>
 </html>
