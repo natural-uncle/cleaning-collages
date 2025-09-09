@@ -124,16 +124,26 @@
       for (const it of images){
         const card = document.createElement('article');
         card.className = 'card';
+
+        const link = document.createElement('a');
+        link.href = it.url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+
         const img = document.createElement('img');
         img.loading = 'lazy';
         img.decoding = 'async';
         img.src = it.url;
         img.alt = it.alt || it.caption || data.title || slug || 'image';
-        card.appendChild(img);
+        link.appendChild(img);
+
+        card.appendChild(link);
+
         const cap = document.createElement('div');
         cap.className = 'cap';
         cap.textContent = it.caption || it.alt || '';
         card.appendChild(cap);
+
         grid.appendChild(card);
       }
     }
