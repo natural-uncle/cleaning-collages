@@ -22,3 +22,10 @@
 .grid.thumbs .thumb { aspect-ratio: 1/1 }
 .grid.thumbs .meta { display: none }
 .grid.thumbs .tags { display:none }
+
+
+/* Head layering to avoid hover overlap */
+.head { position: relative; z-index: 5; background: var(--bg); }
+.grid { position: relative; z-index: 1; margin-top: 8px; }
+.card { position: relative; z-index: 0; }
+.card:hover { z-index: 2; transform: translateY(-2px) scale(1.02); }
