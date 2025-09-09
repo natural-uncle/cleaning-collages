@@ -67,10 +67,9 @@
       <button id="view-thumbs" class="viewbtn" aria-pressed="false">縮圖網格模式</button>
     </div> <span id="count" class="muted"></span>
     <div class="toolbar" role="toolbar" aria-label="批次下載">
-      <button id="sel-page">全選本頁</button>
-      <button id="sel-clear">清除選取</button>
-      <button id="download-selected" class="btn primary" disabled>批次下載</button>
-      <span id="sel-count" class="muted"></span>
+
+
+<span id="sel-count" class="muted"></span>
     </div>
 </div>
     <div id="list" class="grid" aria-live="polite"></div>
@@ -83,8 +82,8 @@
   </main>
 
   <template id="card-tpl">
-    <article class="card"><input type="checkbox" class="select" aria-label="選取此作品">
-      <a class="thumb" target="_blank" rel="noopener" aria-label="開啟作品"></a>
+    <article class="card">
+<a class="thumb" target="_blank" rel="noopener" aria-label="開啟作品"></a>
       <div class="meta">
         <div class="row">
           <a class="title" target="_blank" rel="noopener"></a>
@@ -97,6 +96,7 @@
   </template>
 
   <script>
+
 
 
 const PAGE_SIZE = 12;
@@ -113,10 +113,6 @@ async function fetchList() {
   return Array.isArray(json.items) ? json.items : [];
 }
 
-async function downloadSelected(){
-      if (!selected.size) return;
-      const slugs = Array.from(selected);
-      const res = await fetch('/.netlify/functions/zip-batch', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ slugs }) });
       if (!res.ok) { alert('打包下載失敗'); return; }
       const blob = await res.blob();
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `collages_${Date.now()}.zip`; document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
@@ -146,15 +142,8 @@ async function downloadSelected(){
   return out;
 }
 
-function updateSelectionUI(){
-      const btn = document.getElementById('download-selected');
-      if (btn){ btn.disabled = selected.size === 0; btn.textContent = selected.size? `批次下載（${selected.size}）` : '批次下載'; }
-      const sc = document.getElementById('sel-count'); if (sc) sc.textContent = selected.size ? `已選 ${selected.size}` : '';
     }
     function render(items){
-      const selPageBtn = document.getElementById('sel-page'); if (selPageBtn) selPageBtn.onclick = ()=>{ const pageItems = showAll ? items : items.slice((currentPage-1)*PAGE_SIZE, (currentPage-1)*PAGE_SIZE + PAGE_SIZE); pageItems.forEach(it=>selected.add(it.slug)); render(items); };
-      const selClearBtn = document.getElementById('sel-clear'); if (selClearBtn) selClearBtn.onclick = ()=>{ selected.clear(); render(items); };
-      const dlBtn = document.getElementById('download-selected'); if (dlBtn) dlBtn.onclick = ()=> downloadSelected();
   try{ const c = document.getElementById('count'); if (c) c.textContent = `共 ${items.length} 筆作品`; }catch(_){}
   const list = document.querySelector('#list');
   const empty = document.querySelector('#empty');
@@ -191,7 +180,6 @@ function updateSelectionUI(){
       titleA.href = detailUrl;
       titleA.removeAttribute('target'); titleA.removeAttribute('rel');
     }
-    const chk = tpl.querySelector('.select'); if (chk){ chk.checked = selected.has(it.slug); chk.onclick = (e)=> e.stopPropagation(); chk.onchange = (e)=>{ if(e.target.checked){ selected.add(it.slug); } else { selected.delete(it.slug); } updateSelectionUI(); }; }
         const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
     const dateEl = tpl.querySelector('.date'); if (dateEl) dateEl.textContent = dateStr;
     const tagsWrap = tpl.querySelector('.tags');
@@ -258,6 +246,7 @@ async function load(){
 })();
 
 load();
+
 
 
 </script>
