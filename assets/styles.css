@@ -143,6 +143,3 @@ img{ max-width: 100%; display: block; }
   #lb-prev,#lb-next{ position:absolute; top:50%; transform:translateY(-50%); }
   #lb-prev{ left:18px }  #lb-next{ right:18px }
 }
-
-#lb-dialog{ width:auto; }
-@media (max-width:640px){ #lb-dialog{ width:100%; } }
