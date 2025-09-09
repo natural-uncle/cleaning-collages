@@ -68,7 +68,7 @@
     });
     function qsel(id){ return document.getElementById(id); }
     function getSlug(){ const u=new URL(location.href); return u.searchParams.get('slug') || ''; }
-    async function load(){
+    async async function load(){
       const slug = getSlug();
       if (!slug){ qsel('title').textContent = '缺少 slug 參數'; return; }
       try{
