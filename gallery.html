@@ -25,7 +25,7 @@
     h1 { margin: 8px 0 18px; font-size: clamp(24px, 4vw, 36px); }
     .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:20px }
     .card { grid-column: span 12; border:1px solid #eee; border-radius: var(--radius); overflow:hidden; background:#fff; display:flex; flex-direction:column }
-    .thumb { aspect-ratio: 4/3; background:#f6f6f6; display:flex; align-items:center; justify-content:center; font-size:12px; color:#999 }
+    .thumb { aspect-ratio: 16/9; background:#f6f6f6; display:flex; align-items:center; justify-content:center; font-size:12px; color:#999 }
     .meta { padding:14px; display:flex; flex-direction:column; gap:6px }
     .title { font-weight:700 }
     .muted { color:var(--muted); font-size:14px }
@@ -36,13 +36,22 @@
     .pager { display:flex; justify-content:center; gap:10px; margin-top:24px }
     .pager button { padding:8px 12px; border:1px solid #ddd; background:#fff; border-radius:10px }
     @media (min-width: 900px){ .card{ grid-column: span 4 } }
-  </style>
+  
+/* ==== Detail images hard sizing (on gallery.html) ==== */
+#images{ display:grid !important; grid-template-columns: repeat(12, 1fr) !important; gap:20px !important; }
+#images > .card{ grid-column: span 12 !important; }
+@media (min-width:768px){  #images > .card{ grid-column: span 6 !important; } }   /* 2 cols */
+@media (min-width:1024px){ #images > .card{ grid-column: span 4 !important; } }   /* 3 cols */
+#images .card{ overflow:hidden !important; border-radius: var(--radius) !important; }
+#images .card img{ width:100% !important; height:auto !important; display:block !important; aspect-ratio: 4/3 !important; object-fit: cover !important; }
+
+</style>
 <style id="cols-override">
   #list.grid { grid-template-columns: repeat(12, 1fr) !important; }
   #list.grid > .card { grid-column: span 12 !important; }
   @media (min-width: 480px){  #list.grid > .card { grid-column: span 6 !important; } }   /* 2 columns */
   @media (min-width: 768px){  #list.grid > .card { grid-column: span 4 !important; } }   /* 3 columns */
-  @media (min-width: 1024px){ #list.grid > .card { grid-column: span 4 !important; } }   /* 4 columns */
+  @media (min-width: 1024px){ #list.grid > .card { grid-column: span 3 !important; } }   /* 4 columns */
 </style>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
@@ -156,6 +165,20 @@
     }
     async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
-  </script>
+  
+// Enforce sizing for dynamically inserted detail images on this page
+function __enforceImageSizing(root){
+  try{
+    const imgs = (root||document).querySelectorAll('#images .card img, #images img');
+    imgs.forEach(img=>{
+      img.style.width='100%'; img.style.height='auto'; img.style.display='block';
+      img.style.aspectRatio='4 / 3'; img.style.objectFit='cover';
+    });
+  }catch(_){}
+}
+document.addEventListener('DOMContentLoaded',()=>__enforceImageSizing());
+new MutationObserver((muts)=>{ __enforceImageSizing(); }).observe(document.documentElement,{childList:true,subtree:true});
+
+</script>
 </body>
 </html>
