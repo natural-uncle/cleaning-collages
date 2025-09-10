@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <style>
-    :root { --max-w: 1200px; /* 修改：加寬容器以容納 3 欄 * 2 列更舒適 */ --fg: #0d0d0d; --muted: #666; --bg: #ffffff; --brand: #111827; --accent: #111827; --radius: 14px; }
+    :root { --max-w: 1120px; --fg: #0d0d0d; --muted: #666; --bg: #ffffff; --brand: #111827; --accent: #111827; --radius: 14px; }
     *{ box-sizing:border-box }
     html, body { margin:0; padding:0; font-family: 'Noto Sans TC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: var(--fg); background: var(--bg); }
     a { color: inherit; text-decoration: none }
@@ -23,7 +23,7 @@
     .searchbar button { padding:10px 14px; border-radius:10px; background:var(--brand); color:#fff; font-weight:700; border:0 }
     main { padding: 28px 0 60px }
     h1 { margin: 8px 0 18px; font-size: clamp(24px, 4vw, 36px); }
-    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:16px /* 修改：縮小格線間距讓 6 張更貼合頁面 */ }
+    .grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:20px }
     .card { grid-column: span 12; border:1px solid #eee; border-radius: var(--radius); overflow:hidden; background:#fff; display:flex; flex-direction:column }
     .thumb { aspect-ratio: 16/9; background:#f6f6f6; display:flex; align-items:center; justify-content:center; font-size:12px; color:#999 }
     .meta { padding:14px; display:flex; flex-direction:column; gap:6px }
@@ -35,29 +35,22 @@
     .empty { padding:40px; text-align:center; color:#777 }
     .pager { display:flex; justify-content:center; gap:10px; margin-top:24px }
     .pager button { padding:8px 12px; border:1px solid #ddd; background:#fff; border-radius:10px }
-    @media (min-width: 900px){ .card{ grid-column: span 4 } } /* 桌機：每列 3 張，2 列共 6 張 */
+    @media (min-width: 900px){ .card{ grid-column: span 4 } }
   </style>
 <style id="cols-override">
-  #list.grid { grid-template-columns: repeat(12, 1fr);  gap:16px; }
+  #list.grid { grid-template-columns: repeat(12, 1fr) !important; }
   #list.grid > .card { grid-column: span 12 !important; }
   @media (min-width: 480px){  #list.grid > .card { grid-column: span 6 !important; } }   /* 2 columns */
   @media (min-width: 768px){  #list.grid > .card { grid-column: span 4 !important; } }   /* 3 columns */
   @media (min-width: 1024px){ #list.grid > .card { grid-column: span 3 !important; } }   /* 4 columns */
 </style>
   <link rel="stylesheet" href="assets/styles.css">
-
-<style>
-@media (prefers-reduced-motion: reduce){
-  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-}
-</style>
-
 </head>
 <body>
   <header>
     <div class="container nav">
       <a class="logo" href="./">
-        <img decoding="async" loading="lazy" src="logo.png" alt="voxhuma">
+        <img src="logo.png" alt="voxhuma">
         <span>voxhuma</span>
       </a>
       <form id="filters" class="searchbar" onsubmit="event.preventDefault(); load()">
@@ -75,7 +68,7 @@
 
   <main class="container">
     <h1>作品清單</h1> <span id="count" class="muted"></span>
-    <div id="list" class="grid" aria-live="polite"></div>
+    <div id="list" class="grid" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
       <button id="prev">上一頁</button>
       <span id="pageInfo" class="muted"></span>
@@ -98,7 +91,7 @@
   </template>
 
   <script>
-    const PAGE_SIZE = 6; // 修改：每頁顯示 6 個作品
+    const PAGE_SIZE = 6;
     let currentPage = 1;
     let lastData = [];
     async function fetchList() {
