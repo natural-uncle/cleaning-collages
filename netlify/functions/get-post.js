@@ -1,17 +1,10 @@
 function json(obj, status = 200) {
-
-function withCors(res){
-  const h = new Headers(res.headers || {});
-  h.set('access-control-allow-origin','*');
-  h.set('access-control-allow-methods','GET,POST,OPTIONS');
-  h.set('access-control-allow-headers','content-type');
-  return withCors(new Response(res.body, { status: res.status || 200, headers: h });
-}
-  return withCors(new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' } });
 }
 
 export default async (request) => {
-  if (request.method === 'OPTIONS') return withCors(new Response(null, {status:204}));
+  if (request.method === 'OPTIONS') return new Response(null, {status:204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' }});
+  if (request.method === 'OPTIONS') return json({}, 204);
   try {
     const url = new URL(request.url);
     const slug = url.searchParams.get('slug');
