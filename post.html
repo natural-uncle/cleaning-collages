@@ -32,21 +32,22 @@
     .cap { padding:10px 12px; font-size:14px; color:#444; border-top:1px solid #f0f0f0 }
     .meta { display:flex; align-items:center; gap:8px; color:#777; font-size:14px }
     @media (min-width: 900px){ .card{ grid-column: span 6 } }
-  </style>
-  <link rel="stylesheet" href="assets/styles.css">
+  
+/* Post images: 1/2/3 columns and sizing */
+#images.grid{ display:grid; gap:16px; grid-template-columns: repeat(1, minmax(0,1fr)); }
+@media (min-width:768px){ #images.grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (min-width:1024px){ #images.grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+#images .card{ overflow:hidden; border-radius: var(--radius); }
+#images .card img{ width:100%; height:auto; aspect-ratio: 4/3; object-fit: cover; display:block; }
 
-<style>
-@media (prefers-reduced-motion: reduce){
-  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-}
 </style>
-
+  <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <header>
     <div class="container nav">
       <a class="logo" href="gallery.html">
-        <img decoding="async" loading="lazy" src="logo.png" alt="voxhuma">
+        <img src="logo.png" alt="voxhuma">
         <span>voxhuma</span>
       </a>
       <a class="ghost" href="gallery.html">回到清單</a>
@@ -212,7 +213,7 @@ load();
     <button id="lb-close" aria-label="關閉" style="position:absolute;top:8px;right:8px;padding:12px 14px;border:1px solid #666;background:#111;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:16px;z-index:1001">✕</button>
     <div id="lb-dialog" style="position:relative;max-width:94vw;max-height:92vh;display:flex;flex-direction:column;align-items:center;">
       <figure style="max-width:94vw;max-height:84vh;margin:0;text-align:center">
-        <img decoding="async" loading="lazy" id="lb-img" alt="" style="max-width:94vw;max-height:72vh;border-radius:12px;display:block;margin:0 auto" />
+        <img id="lb-img" alt="" style="max-width:94vw;max-height:72vh;border-radius:12px;display:block;margin:0 auto" />
         <figcaption id="lb-cap" style="color:#ddd;font-size:16px;margin-top:10px"></figcaption>
         <div id="lb-count" style="color:#bbb;font-size:13px;margin-top:4px"></div>
       </figure>
