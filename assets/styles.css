@@ -160,15 +160,3 @@ img{ max-width: 100%; display: block; }
   #lb-prev{ left:24px !important; }
   #lb-next{ right:24px !important; }
 }
-
-/* ==== Fix: gallery 3x2 and post image sizing ==== */
-#list.grid{ grid-template-columns: repeat(1, 1fr); }
-@media (min-width:768px){ #list.grid{ grid-template-columns: repeat(2, 1fr); } }
-@media (min-width:1024px){ #list.grid{ grid-template-columns: repeat(3, 1fr); } }
-
-#images.grid{ grid-template-columns: repeat(1, 1fr); }
-@media (min-width:768px){ #images.grid{ grid-template-columns: repeat(2, 1fr); } }
-@media (min-width:1024px){ #images.grid{ grid-template-columns: repeat(3, 1fr); } }
-
-#images .card{ overflow:hidden; border-radius: var(--radius); }
-#images .card img{ width:100%; height:auto; aspect-ratio: 4/3; object-fit: cover; display:block; }
