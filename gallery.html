@@ -38,11 +38,11 @@
     @media (min-width: 900px){ .card{ grid-column: span 4 } } /* 桌機：每列 3 張，2 列共 6 張 */
   </style>
 <style id="cols-override">
-  #list.grid { grid-template-columns: repeat(12, 1fr) !important; }
+  #list.grid { grid-template-columns: repeat(12, 1fr);  gap:16px; }
   #list.grid > .card { grid-column: span 12 !important; }
   @media (min-width: 480px){  #list.grid > .card { grid-column: span 6 !important; } }   /* 2 columns */
   @media (min-width: 768px){  #list.grid > .card { grid-column: span 4 !important; } }   /* 3 columns */
-  @media (min-width: 1024px){ #list.grid > .card { grid-column: span 4 !important; } }   /* 4 columns */
+  @media (min-width: 1024px){ #list.grid > .card { grid-column: span 3 !important; } }   /* 4 columns */
 </style>
   <link rel="stylesheet" href="assets/styles.css">
 
