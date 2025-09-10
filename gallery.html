@@ -36,16 +36,7 @@
     .pager { display:flex; justify-content:center; gap:10px; margin-top:24px }
     .pager button { padding:8px 12px; border:1px solid #ddd; background:#fff; border-radius:10px }
     @media (min-width: 900px){ .card{ grid-column: span 4 } }
-  
-/* ==== Detail images hard sizing (on gallery.html) ==== */
-#images{ display:grid !important; grid-template-columns: repeat(12, 1fr) !important; gap:20px !important; }
-#images > .card{ grid-column: span 12 !important; }
-@media (min-width:768px){  #images > .card{ grid-column: span 6 !important; } }   /* 2 cols */
-@media (min-width:1024px){ #images > .card{ grid-column: span 4 !important; } }   /* 3 cols */
-#images .card{ overflow:hidden !important; border-radius: var(--radius) !important; }
-#images .card img{ width:100% !important; height:auto !important; display:block !important; aspect-ratio: 4/3 !important; object-fit: cover !important; }
-
-</style>
+  </style>
 <style id="cols-override">
   #list.grid { grid-template-columns: repeat(12, 1fr) !important; }
   #list.grid > .card { grid-column: span 12 !important; }
@@ -100,7 +91,7 @@
   </template>
 
   <script>
-    const PAGE_SIZE = 6;
+    const PAGE_SIZE = 12;
     let currentPage = 1;
     let lastData = [];
     async function fetchList() {
@@ -165,20 +156,6 @@
     }
     async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
-  
-// Enforce sizing for dynamically inserted detail images on this page
-function __enforceImageSizing(root){
-  try{
-    const imgs = (root||document).querySelectorAll('#images .card img, #images img');
-    imgs.forEach(img=>{
-      img.style.width='100%'; img.style.height='auto'; img.style.display='block';
-      img.style.aspectRatio='4 / 3'; img.style.objectFit='cover';
-    });
-  }catch(_){}
-}
-document.addEventListener('DOMContentLoaded',()=>__enforceImageSizing());
-new MutationObserver((muts)=>{ __enforceImageSizing(); }).observe(document.documentElement,{childList:true,subtree:true});
-
-</script>
+  </script>
 </body>
 </html>
