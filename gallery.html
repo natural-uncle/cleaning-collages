@@ -70,11 +70,11 @@
     <h1>作品清單</h1> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
-      <button id="prev" aria-label="上一頁">上一頁</button>
+      <button type="button" id="prev" aria-label="上一頁">上一頁</button>
       <span id="pageInfo" class="muted"></span>
-      <button id="next" aria-label="下一頁">下一頁</button>
-      <button id="last" aria-label="最後一頁">最後一頁</button>
-      <button id="toggleAll" aria-pressed="false" aria-label="顯示全部">顯示全部</button>
+      <button type="button" id="next" aria-label="下一頁">下一頁</button>
+      <button type="button" id="last" aria-label="最後一頁">最後一頁</button>
+      <button type="button" id="toggleAll" aria-pressed="false" aria-label="顯示全部">顯示全部</button>
     </div>
     <div id="empty" class="empty" hidden>目前尚無作品</div>
   </main>
@@ -139,9 +139,16 @@
       const pager = document.querySelector('#pager');
       list.innerHTML = '';
       if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
-      const start = (currentPage-1) * PAGE_SIZE;
-      const pageItems = items.slice(start, start + PAGE_SIZE);
       const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+      if (!Number.isFinite(currentPage) || currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage-1) * PAGE_SIZE;
+      let pageItems = items.slice(start, start + PAGE_SIZE);
+      if (items.length && pageItems.length === 0) {
+        currentPage = totalPages;
+        const s2 = (currentPage-1) * PAGE_SIZE;
+        pageItems = items.slice(s2, s2 + PAGE_SIZE);
+      }
       for (const it of pageItems){
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
         const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
