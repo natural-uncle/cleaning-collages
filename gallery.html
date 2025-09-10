@@ -45,6 +45,16 @@
   @media (min-width: 1024px){ #list.grid > .card { grid-column: span 4 !important; } }   /* 3 columns on desktop */   /* 4 columns */
 </style>
   <link rel="stylesheet" href="assets/styles.css">
+<script>
+window.addEventListener('error', function(e){
+  try{
+    if (String(e && e.message || '').includes('Cannot access rules') && String(e && e.filename || '').includes('custom.js')){
+      e.preventDefault && e.preventDefault();
+      return false;
+    }
+  }catch(_){} 
+}, true);
+</script>
 </head>
 <body>
   <header>
