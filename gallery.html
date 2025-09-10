@@ -37,8 +37,14 @@
     .pager button { padding:8px 12px; border:1px solid #ddd; background:#fff; border-radius:10px }
     @media (min-width: 900px){ .card{ grid-column: span 4 } }
   </style>
-  <link rel="icon" href="https://res.cloudinary.com/dijzndzw2/image/upload/v1757173258/logo-3_jznrtv.png" type="image/png">
-  <link rel="apple-touch-icon" href="https://res.cloudinary.com/dijzndzw2/image/upload/v1757173258/logo-3_jznrtv.png">
+<style id="cols-override">
+  #list.grid { grid-template-columns: repeat(12, 1fr) !important; }
+  #list.grid > .card { grid-column: span 12 !important; }
+  @media (min-width: 480px){  #list.grid > .card { grid-column: span 6 !important; } }   /* 2 columns */
+  @media (min-width: 768px){  #list.grid > .card { grid-column: span 4 !important; } }   /* 3 columns */
+  @media (min-width: 1024px){ #list.grid > .card { grid-column: span 3 !important; } }   /* 4 columns */
+</style>
+  <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <header>
@@ -61,7 +67,7 @@
   </header>
 
   <main class="container">
-    <h1>作品清單</h1>
+    <h1>作品清單</h1> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
       <button id="prev">上一頁</button>
@@ -84,12 +90,7 @@
     </article>
   </template>
 
-  <script>function tagArray(t){
-  if (Array.isArray(t)) return t;
-  if (!t) return [];
-  return String(t).split(/[,\s]+/).map(s=>s.trim()).filter(Boolean);
-}
-
+  <script>
     const PAGE_SIZE = 12;
     let currentPage = 1;
     let lastData = [];
@@ -117,7 +118,7 @@
       });
       return out;
     }
-    function render(items){
+    function render(items){ try{ document.getElementById('count').textContent = `共 ${items.length} 筆作品`; }catch(_){} 
       const list = document.querySelector('#list');
       const empty = document.querySelector('#empty');
       const pager = document.querySelector('#pager');
@@ -137,13 +138,13 @@
         const title = it.title || it.slug || '未命名';
         tpl.querySelector('.title').textContent = title;
         tpl.querySelector('.title').href = detailUrl;
-        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleString('zh-TW');
+        const dateStr = new Date(it.date || it.created_at || Date.now()).toLocaleDateString('zh-TW');
         tpl.querySelector('.date').textContent = dateStr;
         const tagsWrap = tpl.querySelector('.tags');
-        tagArray(it.tags).forEach(t=>{
-          const span = document.createElement('span');
-          span.className = 'tag'; span.textContent = t; tagsWrapif (tagsWrap) tagsWrap.appendChild(span);
-        });
+        if (tagsWrap){
+          const tags = Array.isArray(it.tags) ? it.tags : (typeof it.tags === 'string' ? it.tags.split(/[,，\s]+/).filter(Boolean) : []);
+          tags.forEach(t=>{ const span=document.createElement('span'); span.className='tag'; span.textContent=t; tagsWrap.appendChild(span); });
+        }
         list.appendChild(tpl);
       }
       pager.hidden = totalPages <= 1;
