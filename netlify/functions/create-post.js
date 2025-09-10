@@ -1,13 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
 
-function withCors(res){
-  const h = new Headers(res.headers || {});
-  h.set('access-control-allow-origin','*');
-  h.set('access-control-allow-methods','GET,POST,OPTIONS');
-  h.set('access-control-allow-headers','content-type');
-  return withCors(new Response(res.body, { status: res.status || 200, headers: h });
-}
-
 cloudinary.config({
   cloud_name: process.env.CLD_CLOUD_NAME,
   api_key: process.env.CLD_API_KEY,
@@ -15,11 +7,12 @@ cloudinary.config({
 });
 
 function json(obj, status = 200) {
-  return withCors(new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' } });
 }
 
 export default async (request) => {
-  if (request.method === 'OPTIONS') return withCors(new Response(null, {status:204}));
+  if (request.method === 'OPTIONS') return new Response(null, {status:204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' }});
+  if (request.method === 'OPTIONS') return json({}, 204);
   try {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     const body = await request.json().catch(() => null);
