@@ -172,5 +172,50 @@
     async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
   </script>
+<script>
+// Robust binding for "最後一頁" and "顯示全部"
+(function(){
+  function bindButtons(){
+    var last = document.getElementById('last');
+    var toggle = document.getElementById('toggleAll');
+    if (!last || !toggle) return;
+
+    last.onclick = function(){
+      try{
+        var totalPages = Math.max(1, Math.ceil((Array.isArray(window.lastData)? window.lastData.length : 0) / window.PAGE_SIZE));
+        window.currentPage = totalPages;
+        if (typeof render === 'function' && typeof applyFilters === 'function'){
+          render(applyFilters(window.lastData || []));
+        }
+      }catch(e){ console.error(e); }
+    };
+
+    if (typeof render !== 'undefined'){
+      if (typeof render._origPageSize === 'undefined') render._origPageSize = window.PAGE_SIZE || 6;
+    }
+    toggle.onclick = function(){
+      var pressed = toggle.getAttribute('aria-pressed') === 'true';
+      if (!pressed) {
+        toggle.setAttribute('aria-pressed', 'true');
+        toggle.textContent = '分頁顯示';
+        window.PAGE_SIZE = Number.MAX_SAFE_INTEGER;
+        window.currentPage = 1;
+      } else {
+        toggle.setAttribute('aria-pressed', 'false');
+        toggle.textContent = '顯示全部';
+        window.PAGE_SIZE = (render && render._origPageSize) || 6;
+      }
+      if (typeof render === 'function' && typeof applyFilters === 'function'){
+        render(applyFilters(window.lastData || []));
+      }
+    };
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bindButtons);
+  } else {
+    bindButtons();
+  }
+})();
+</script>
 </body>
 </html>
