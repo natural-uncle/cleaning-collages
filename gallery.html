@@ -70,9 +70,11 @@
     <h1>作品清單</h1> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
-      <button id="prev">上一頁</button>
+      <button id="prev" aria-label="上一頁">上一頁</button>
       <span id="pageInfo" class="muted"></span>
-      <button id="next">下一頁</button>
+      <button id="next" aria-label="下一頁">下一頁</button>
+      <button id="last" aria-label="最後一頁">最後一頁</button>
+      <button id="toggleAll" aria-pressed="false" aria-label="顯示全部">顯示全部</button>
     </div>
     <div id="empty" class="empty" hidden>目前尚無作品</div>
   </main>
@@ -94,13 +96,26 @@
     const PAGE_SIZE = 12;
     let currentPage = 1;
     let lastData = [];
+    
     async function fetchList() {
-      const url = new URL(location.origin + '/.netlify/functions/list-posts');
-      const r = await fetch(url);
-      if (!r.ok) throw new Error('載入作品清單失敗');
-      const json = await r.json();
-      return Array.isArray(json.items) ? json.items : [];
+      const acc = [];
+      let cursor = undefined;
+      let guard = 0;
+      while (guard++ < 50) { // hard cap 50 * 100 = 5000 items max
+        const url = new URL(location.origin + '/.netlify/functions/list-posts');
+        url.searchParams.set('per_page', '100');
+        if (cursor) url.searchParams.set('cursor', cursor);
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('載入作品清單失敗');
+        const json = await r.json();
+        const batch = Array.isArray(json.items) ? json.items : (Array.isArray(json.data) ? json.data : []);
+        acc.push(...batch);
+        cursor = json.cursor || json.next_cursor || null;
+        if (!cursor) break;
+      }
+      return acc;
     }
+    
     function applyFilters(items){
       const q = document.querySelector('#q').value.trim().toLowerCase();
       const sort = document.querySelector('#sort').value;
