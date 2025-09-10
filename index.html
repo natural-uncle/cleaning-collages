@@ -39,6 +39,7 @@
     .lb-controls { position:absolute; left:0; right:0; bottom:16px; display:flex; align-items:center; justify-content:center; gap:16px; pointer-events:none; }
     .lb-controls .navBtn { pointer-events:auto; font-size:20px; color:#fff; width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:rgba(17,24,39,.6); border:1px solid rgba(255,255,255,.2); backdrop-filter: blur(6px); }
   </style>
+
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
   <header class="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-slate-200/60">
@@ -442,5 +443,33 @@ async function loadPost(slug){
     window.addEventListener('hashchange', route, { passive: true }); route();
   });
   </script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Lazy loading fallback
+  document.querySelectorAll('img[loading="lazy"]').forEach(function(img){
+    if(!('loading' in HTMLImageElement.prototype)){
+      const s = document.createElement('script'); s.src='https://polyfill.io/v3/polyfill.min.js?features=IntersectionObserver'; s.onload=function(){
+        const obs = new IntersectionObserver((entries)=>{
+          entries.forEach(e=>{ if(e.isIntersecting){ e.target.src = e.target.dataset.src || e.target.src; obs.unobserve(e.target); } });
+        });
+        document.querySelectorAll('img[loading="lazy"]').forEach(i=>obs.observe(i));
+      }; document.head.appendChild(s);
+    }
+  });
+  // Global fetch error banner hook
+  const showError = (msg) => {
+    let el = document.getElementById('error-banner');
+    if(!el){
+      el = document.createElement('div'); el.id='error-banner';
+      el.style.cssText='position:fixed;left:0;right:0;top:0;padding:10px 16px;background:#b00020;color:#fff;z-index:9999;font:14px/1.4 system-ui';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    setTimeout(()=>{ el.remove(); }, 4000);
+  };
+  window.addEventListener('unhandledrejection', e => showError(String(e.reason||e)));
+  window.addEventListener('error', e => showError(String(e.message||e)));
+});
+</script>
 </body>
 </html>
