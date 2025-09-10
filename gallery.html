@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; connect-src 'self' https:; img-src * data: blob; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
   <meta charset="utf-8">
   <title>作品清單｜voxhuma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -45,6 +46,35 @@
   @media (min-width: 1024px){ #list.grid > .card { grid-column: span 4 !important; } }   /* 3 columns on desktop */   /* 4 columns */
 </style>
   <link rel="stylesheet" href="assets/styles.css">
+<script>
+window.addEventListener('error', function(e){
+  try{
+    if (String(e && e.message || '').includes('Cannot access rules') && String(e && e.filename || '').includes('custom.js')){
+      e.preventDefault && e.preventDefault();
+      return false;
+    }
+  }catch(_){} 
+}, true);
+</script>
+<script>
+(function(){
+  function kill(node){
+    try{
+      if(node && node.tagName === 'SCRIPT' && /custom\.js/i.test(node.src)){
+        node.parentNode && node.parentNode.removeChild(node);
+      }
+    }catch(_){}
+  }
+  // Remove existing matching scripts
+  document.querySelectorAll('script[src]').forEach(kill);
+  // Watch for future injections
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      (m.addedNodes||[]).forEach(kill);
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
 </head>
 <body>
   <header>
@@ -70,11 +100,11 @@
     <h1>作品清單</h1> <span id="count" class="muted"></span>
     <div id="list" class="grid" aria-live="polite"></div>
     <div id="pager" class="pager" hidden>
-      <button id="prev" aria-label="上一頁">上一頁</button>
+      <button type="button" type="button" id="prev" aria-label="上一頁">上一頁</button>
       <span id="pageInfo" class="muted"></span>
-      <button id="next" aria-label="下一頁">下一頁</button>
-      <button id="last" aria-label="最後一頁">最後一頁</button>
-      <button id="toggleAll" aria-pressed="false" aria-label="顯示全部">顯示全部</button>
+      <button type="button" type="button" id="next" aria-label="下一頁">下一頁</button>
+      <button type="button" type="button" id="last" aria-label="最後一頁">最後一頁</button>
+      <button type="button" type="button" id="toggleAll" aria-pressed="false" aria-label="顯示全部">顯示全部</button>
     </div>
     <div id="empty" class="empty" hidden>目前尚無作品</div>
   </main>
@@ -94,8 +124,8 @@
 
   <script>
     const PAGE_SIZE = 6;
-    let currentPage = 1;
-    let lastData = [];
+    let currentPage = 1; window.currentPage = currentPage;
+    let lastData = []; window.lastData = lastData;
     
     async function fetchList() {
       const acc = [];
@@ -139,9 +169,16 @@
       const pager = document.querySelector('#pager');
       list.innerHTML = '';
       if (!items.length){ empty.hidden = false; pager.hidden = true; return; } else { empty.hidden = true; }
-      const start = (currentPage-1) * PAGE_SIZE;
-      const pageItems = items.slice(start, start + PAGE_SIZE);
       const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+      if (!Number.isFinite(currentPage) || currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage-1) * PAGE_SIZE;
+      let pageItems = items.slice(start, start + PAGE_SIZE);
+      if (items.length && pageItems.length === 0) {
+        currentPage = totalPages;
+        const s2 = (currentPage-1) * PAGE_SIZE;
+        pageItems = items.slice(s2, s2 + PAGE_SIZE);
+      }
       for (const it of pageItems){
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
         const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
@@ -169,8 +206,102 @@
       document.querySelector('#prev').onclick = () => { if(currentPage>1){ currentPage--; render(applyFilters(lastData)); } };
       document.querySelector('#next').onclick = () => { if(currentPage<totalPages){ currentPage++; render(applyFilters(lastData)); } };
     }
-    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
+    async function load(){ try{ if (!lastData.length){ lastData = await fetchList(); window.lastData = lastData; } const filtered = applyFilters(lastData); currentPage = 1; render(filtered);}catch(e){ document.querySelector('#list').innerHTML = `<div class=\"empty\">${e.message||e}</div>`; } }
     load();
   </script>
+<script>
+// removed old binding
+(function(){
+  function bindButtons(){
+    var last = document.getElementById('last');
+    var toggle = document.getElementById('toggleAll');
+    if (!last || !toggle) return;
+
+    last.onclick = function(){
+      try{
+        var totalPages = Math.max(1, Math.ceil((Array.isArray(window.lastData)? window.lastData.length : 0) / window.PAGE_SIZE));
+        window.currentPage = totalPages;
+        if (typeof render === 'function' && typeof applyFilters === 'function'){
+          render(applyFilters(window.lastData || []));
+        }
+      }catch(e){ console.error(e); }
+    };
+
+    if (typeof render !== 'undefined'){
+      if (typeof render._origPageSize === 'undefined') render._origPageSize = window.PAGE_SIZE || 6;
+    }
+    toggle.onclick = function(){
+      var pressed = toggle.getAttribute('aria-pressed') === 'true';
+      if (!pressed) {
+        toggle.setAttribute('aria-pressed', 'true');
+        toggle.textContent = '分頁顯示';
+        window.PAGE_SIZE = Number.MAX_SAFE_INTEGER;
+        window.currentPage = 1;
+      } else {
+        toggle.setAttribute('aria-pressed', 'false');
+        toggle.textContent = '顯示全部';
+        window.PAGE_SIZE = (render && render._origPageSize) || 6;
+      }
+      if (typeof render === 'function' && typeof applyFilters === 'function'){
+        render(applyFilters(window.lastData || []));
+      }
+    };
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', bindButtons);
+  } else {
+    bindButtons();
+  }
+})();
+</script>
+
+<script>
+(function(){
+  window.PAGE_SIZE = window.PAGE_SIZE || 6;
+  window.currentPage = window.currentPage || 1;
+  window.lastData = Array.isArray(window.lastData) ? window.lastData : [];
+
+  function bind(id, fn){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      fn(); return false;
+    }, {passive:false});
+  }
+
+  function safeRender(){
+    if (typeof applyFilters !== 'function' || typeof render !== 'function') return;
+    const items = applyFilters(window.lastData || []);
+    const total = Math.max(1, Math.ceil(items.length / window.PAGE_SIZE));
+    if (!Number.isFinite(window.currentPage) || window.currentPage < 1) window.currentPage = 1;
+    if (window.currentPage > total) window.currentPage = total;
+    render(items);
+  }
+
+  bind('last', function(){
+    const len = (window.lastData || []).length;
+    if (!len) return;
+    const total = Math.max(1, Math.ceil(len / window.PAGE_SIZE));
+    window.currentPage = total;
+    safeRender();
+  });
+
+  bind('toggleAll', function(){
+    const btn = document.getElementById('toggleAll');
+    const on = btn.getAttribute('aria-pressed') === 'true';
+    if (!on){
+      btn.setAttribute('aria-pressed','true'); btn.textContent = '分頁顯示';
+      if (typeof render._origPageSize === 'undefined') render._origPageSize = window.PAGE_SIZE;
+      window.PAGE_SIZE = Number.MAX_SAFE_INTEGER; window.currentPage = 1;
+    }else{
+      btn.setAttribute('aria-pressed','false'); btn.textContent = '顯示全部';
+      window.PAGE_SIZE = render._origPageSize || 6;
+    }
+    safeRender();
+  });
+})();
+</script>
+
 </body>
 </html>
