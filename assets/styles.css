@@ -45,10 +45,7 @@ img{ max-width: 100%; display: block; }
 
 /* ====== Grid & Cards ====== */
 /* The page defines a 12-col grid inline; this stylesheet only sets base layout */
-/* === Gallery grid columns: 1 / 2 / 3 === */
-.grid{ display:grid; gap:16px; grid-template-columns: repeat(1, minmax(0,1fr)); }
-@media (min-width:768px){ .grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-@media (min-width:1024px){ .grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+.grid{ display:grid; gap:16px; }
 .card{
   background: var(--card);
   border:1px solid var(--border);
@@ -165,5 +162,15 @@ img{ max-width: 100%; display: block; }
 }
 
 
-/* Accessibility focus rings */
-:focus-visible{ outline: 3px solid #111827; outline-offset: 2px; }
+/* ===== Post page image sizing ===== */
+#images.grid{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+@media (min-width:768px){ #images.grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (min-width:1024px){ #images.grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+#images .card{ overflow: hidden; border-radius: var(--radius); }
+#images .card img{ width:100%; height:auto; aspect-ratio: 4/3; object-fit: cover; display:block; }
+
+/* Explicit gallery page 3x2 layout when wide */
+#list.grid{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+@media (min-width:768px){ #list.grid{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (min-width:1024px){ #list.grid{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
