@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>作品詳情｜voxhuma</title>
+  <title>作品詳情</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,9 +40,9 @@
 <body>
   <header>
     <div class="container nav">
-      <a class="logo" href="gallery.html">
-        <img src="logo.png" alt="voxhuma">
-        <span>voxhuma</span>
+      <a class="logo" href="index.html">
+        <img src="logo.png" alt="回拼貼">
+        <span>回拼貼</span>
       </a>
       <a class="ghost" href="gallery.html">回到清單</a>
     </div>
@@ -118,7 +118,7 @@ function initLightbox(images){
 // Render
 function render(slug, data){
   // meta
-  document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
+  document.title = (data.title ? data.title + '｜' : '') + '作品詳情';
   if (qsel('title')) setText('title', data.title || slug);
   if (qsel('slug')) setText('slug', ' / ' + slug);
   const d = new Date(data.date || data.created_at || Date.now());
