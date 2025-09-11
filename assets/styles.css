@@ -190,3 +190,12 @@ header img, .logo img {
   max-height: 40px !important;
   object-fit: contain !important;
 }
+
+
+/* --- LOGO 最大高度限制，維持比例 --- */
+header .logo img {
+  max-height: 64px;
+  height: auto;
+  width: auto;
+  object-fit: contain;
+}
