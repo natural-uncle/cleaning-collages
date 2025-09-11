@@ -110,3 +110,7 @@ header .searchbar button:hover{ filter:brightness(1.05); }
   header .searchbar{ order:2; width:100%; margin-top:8px; }
   header .searchbar input[type="search"]{ flex:1; min-width:0; }
 }
+/* 詳情頁 LOGO 縮小 */
+body.post header .logo img {
+  max-height: 48px;
+}
