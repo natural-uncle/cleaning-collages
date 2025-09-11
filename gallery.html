@@ -2,13 +2,11 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>自然大叔｜作品清單</title>
+  <title>作品清單｜voxhuma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <!-- 新增 favicon -->
-  <link rel="icon" href="https://res.cloudinary.com/dijzndzw2/image/upload/v1757176751/logo-3_hddq08.png" type="image/png"/>
   <style>
     :root { --max-w: 1120px; --fg: #0d0d0d; --muted: #666; --bg: #ffffff; --brand: #111827; --accent: #111827; --radius: 14px; }
     *{ box-sizing:border-box }
@@ -47,13 +45,29 @@
   @media (min-width: 1024px){ #list.grid > .card { grid-column: span 3 !important; } }   /* 4 columns */
 </style>
   <link rel="stylesheet" href="assets/styles.css">
+
+<script>
+const WM_PUBLIC_ID = 'logo_transparent_qmmu21';
+const WM_TRANSFORM = `l_${WM_PUBLIC_ID},fl_relative,w_0.3,g_center,opacity_70`;
+function withWM(url){
+  try{
+    if(!url) return url;
+    const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/);
+    if(!m) return url;
+    const prefix = m[1]; const rest = m[2];
+    if(rest.startsWith(WM_TRANSFORM)) return url;
+    return prefix + WM_TRANSFORM + '/' + rest;
+  }catch(_){ return url; }
+}
+</script>
+
 </head>
 <body>
   <header>
     <div class="container nav">
       <a class="logo" href="./">
-        <img src="logo.png" alt="回拼貼">
-        <span>回拼貼</span>
+        <img src="logo.png" alt="voxhuma">
+        <span>voxhuma</span>
       </a>
       <form id="filters" class="searchbar" onsubmit="event.preventDefault(); load()">
         <input id="q" type="search" placeholder="搜尋標題或標籤…" />
@@ -132,7 +146,7 @@
       for (const it of pageItems){
         const tpl = document.querySelector('#card-tpl').content.cloneNode(true);
         const detailUrl = `post.html?slug=${encodeURIComponent(it.slug)}`;
-        const viewUrl = it.preview || it.cover || it.items?.[0]?.url || '#';
+        const viewUrl = withWM(it.preview || it.cover || it.items?.[0]?.url || '#');
         tpl.querySelector('.thumb').href = detailUrl;
         tpl.querySelector('.thumb').style.backgroundImage = viewUrl ? `url("${viewUrl}")` : '';
         tpl.querySelector('.thumb').style.backgroundSize = 'cover';
