@@ -2,11 +2,13 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>作品詳情｜voxhuma</title>
+  <title>作品讀取中...</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <!-- 新增 favicon -->
+  <link rel="icon" href="https://res.cloudinary.com/dijzndzw2/image/upload/v1757176751/logo-3_hddq08.png" type="image/png"/>
   <style>
     :root { --max-w: 1120px; --fg:#0d0d0d; --muted:#666; --bg:#fff; --brand:#111827; --radius: 14px; }
     *{ box-sizing:border-box }
@@ -34,33 +36,13 @@
     @media (min-width: 900px){ .card{ grid-column: span 6 } }
   </style>
   <link rel="stylesheet" href="assets/styles.css">
-
-<script>
-// Cloudinary URL watermark helper (Mode 1: URL transformation)
-// Set your overlay asset public_id here (upload once to Cloudinary as an image asset)
-const WM_PUBLIC_ID = 'logo_transparent_qmmu21'; // e.g., 'brand/wm' if you store under a folder
-// Overlay params: relative width 18%, bottom-right, padding 16px, 70% opacity
-const WM_TRANSFORM = `l_${WM_PUBLIC_ID},fl_relative,w_0.3,g_center,opacity_70`;
-function withWM(url){
-  try{
-    if(!url) return url;
-    const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/);
-    if(!m) return url; // non-Cloudinary image
-    const prefix = m[1]; const rest = m[2];
-    // Avoid duplicating if already has our overlay
-    if(rest.startsWith(WM_TRANSFORM)) return url;
-    return prefix + WM_TRANSFORM + '/' + rest;
-  }catch(_){ return url; }
-}
-</script>
-
 </head>
 <body>
   <header>
     <div class="container nav">
-      <a class="logo" href="gallery.html">
-        <img src="logo.png" alt="voxhuma">
-        <span>voxhuma</span>
+      <a class="logo" href="index.html">
+        <img src="logo.png" alt="回拼貼">
+        <span>回拼貼</span>
       </a>
       <a class="ghost" href="gallery.html">回到清單</a>
     </div>
@@ -102,7 +84,7 @@ function initLightbox(images){
 
   function update(){
     const it = LB_IMAGES[LB_INDEX] || {};
-    img.src = withWM(it.url || '');
+    img.src = it.url || '';
     img.alt = it.alt || '';
     cap.textContent = it.caption || it.alt || '';
     count.textContent = (LB_INDEX+1) + ' / ' + LB_IMAGES.length;
@@ -136,7 +118,7 @@ function initLightbox(images){
 // Render
 function render(slug, data){
   // meta
-  document.title = (data.title ? data.title + '｜' : '') + '作品詳情｜voxhuma';
+  document.title = (data.title ? data.title + '｜' : '') + '作品詳情';
   if (qsel('title')) setText('title', data.title || slug);
   if (qsel('slug')) setText('slug', ' / ' + slug);
   const d = new Date(data.date || data.created_at || Date.now());
@@ -186,7 +168,7 @@ if (first){
     const it = normalized[i];
     const card = document.createElement('article'); card.className = 'card';
     const link = document.createElement('a'); link.href = it.url; link.addEventListener('click', function(e){ e.preventDefault(); openLightbox(i); });
-    const img = document.createElement('img'); img.loading = 'lazy'; img.alt = it.alt || ''; img.src = withWM(it.url);
+    const img = document.createElement('img'); img.loading = 'lazy'; img.alt = it.alt || ''; img.src = it.url;
     link.appendChild(img); card.appendChild(link);
     const cap = document.createElement('div'); cap.className = 'cap'; cap.textContent = it.caption || it.alt || '';
     card.appendChild(cap);
@@ -234,18 +216,5 @@ load();
         <button id="lb-next" aria-label="下一張" style="padding:12px 16px;border:1px solid #666;background:#111;color:#fff;border-radius:12px;cursor:pointer;font-weight:800;font-size:18px">下一張 ⟩</button>
       </div>
     </div>
-  </div>
-    <script>
-    // Keyboard lightbox helpers
-    document.addEventListener('keydown', function(e){
-      const lb = document.getElementById('lightbox');
-      const isOpen = lb && !lb.classList.contains('hidden');
-      if(!isOpen) return;
-      if(e.key === 'Escape'){ document.getElementById('lb-close')?.click(); }
-      if(e.key === 'ArrowLeft'){ document.getElementById('lb-prev')?.click(); }
-      if(e.key === 'ArrowRight'){ document.getElementById('lb-next')?.click(); }
-    });
-    </script>
-    
-</body>
+  </div></body>
 </html>
