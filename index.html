@@ -40,30 +40,17 @@
     .lb-controls .navBtn { pointer-events:auto; font-size:20px; color:#fff; width:56px; height:56px; display:flex; align-items:center; justify-content:center; border-radius:9999px; background:rgba(17,24,39,.6); border:1px solid rgba(255,255,255,.2); backdrop-filter: blur(6px); }
   </style>
 
-<script>
-// Cloudinary URL watermark helper (Mode 1: URL transformation)
-// Set your overlay asset public_id here (upload once to Cloudinary as an image asset)
-const WM_PUBLIC_ID = 'logo_transparent_qmmu21'; // e.g., 'brand/wm' if you store under a folder
-// Overlay params: relative width 18%, bottom-right, padding 16px, 70% opacity
-const WM_TRANSFORM = `l_${WM_PUBLIC_ID},fl_relative,w_0.3,g_center,opacity_70`;
-function withWM(url){
-  try{
-    if(!url) return url;
-    const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.*)$/);
-    if(!m) return url; // non-Cloudinary image
-    const prefix = m[1]; const rest = m[2];
-    // Avoid duplicating if already has our overlay
-    if(rest.startsWith(WM_TRANSFORM)) return url;
-    return prefix + WM_TRANSFORM + '/' + rest;
-  }catch(_){ return url; }
+<style>
+@media (prefers-reduced-motion: reduce){
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
-</script>
+</style>
 
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
   <header class="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-slate-200/60">
     <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-      <img src="logo1.png" alt="logo1" class="h-16 w-16 rounded-xl object-contain">
+      <img decoding="async" loading="lazy" src="logo1.png" alt="logo1" class="h-16 w-16 rounded-xl object-contain">
       <div class="leading-tight">
         <div class="font-semibold">自然大叔 Natural Uncle</div>
         <div class="text-[12px] text-slate-500">清洗前後拼貼照片分享</div>
@@ -127,7 +114,7 @@ function withWM(url){
         </div>
 
         <div class="p-5 border-t border-slate-200/60 text-center">
-          <img src="logo.png" alt="公司Logo" class="mx-auto mb-3 max-h-16" loading="lazy"/>
+          <img decoding="async" src="logo.png" alt="公司Logo" class="mx-auto mb-3 max-h-16" loading="lazy"/>
           <p class="text-sm font-semibold">自然大叔 Natural Uncle 專業清淨職人</p>
           <p class="text-sm mt-1">聯絡電話：<a href="tel:0912356331" class="text-blue-600">0912-356-331</a></p>
         </div>
@@ -139,7 +126,7 @@ function withWM(url){
   <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="圖片放大檢視">
     <button class="close" aria-label="關閉">✕</button>
     <div class="content text-center">
-      <img id="lb-img" alt="放大圖片" />
+      <img decoding="async" loading="lazy" id="lb-img" alt="放大圖片" />
       <div id="lb-cap" class="caption"></div>
     </div>
     <div class="lb-controls">
@@ -269,7 +256,7 @@ function withWM(url){
 
       function setPreviewFromFile(f){
         const fr=new FileReader();
-        fr.onload=()=>{ thumb.innerHTML='<img alt="預覽" class="w-full h-full object-cover" src="'+fr.result+'"/>'; };
+        fr.onload=()=>{ thumb.innerHTML='<img decoding="async" loading="lazy" alt="預覽" class="w-full h-full object-cover" src="'+fr.result+'"/>'; };
         fr.readAsDataURL(f);
       }
       $('.remove',row).addEventListener('click',()=>row.remove());
@@ -376,7 +363,7 @@ function withWM(url){
       if (!lbItems.length) return;
       lbIndex = (idx+lbItems.length)%lbItems.length;
       const it = lbItems[lbIndex];
-      $('#lb-img').src = withWM(it.full);
+      $('#lb-img').src = it.full;
       $('#lb-cap').textContent = it.caption || '';
       $('#lightbox').classList.add('open');
     }
@@ -413,7 +400,7 @@ async function loadPost(slug){
           const card=document.createElement('div'); card.className='card overflow-hidden';
           card.innerHTML=`
             <button class="w-full group" data-idx="${i}">
-              <img src="${thumb}" class="w-full h-auto object-contain" loading="lazy" alt="照片 ${i+1}"/>
+              <img decoding="async" src="${thumb}" class="w-full h-auto object-contain" loading="lazy" alt="照片 ${i+1}"/>
             </button>
             <div class="p-3 text-base text-slate-700">${caption}</div>`;
           g.appendChild(card);
