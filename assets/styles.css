@@ -112,5 +112,5 @@ header .searchbar button:hover{ filter:brightness(1.05); }
 }
 /* 詳情頁 LOGO 縮小 */
 body.post header .logo img {
-  max-height: 48px;
+  max-height: 38px;
 }
