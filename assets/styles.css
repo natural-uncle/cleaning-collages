@@ -30,10 +30,19 @@ img{ max-width: 100%; display: block; }
 .viewbtn{ padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:var(--card); cursor:pointer; }
 .viewbtn[aria-pressed="true"]{ background: var(--brand); color:#fff; border-color: var(--brand); }
 
-/* ====== Grid & Cards ====== */
-.grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:20px; }
-@media(max-width:900px){ .grid{ grid-template-columns: repeat(2,1fr); } }
-@media(max-width:600px){ .grid{ grid-template-columns: 1fr; } }
+/* ====== Grid & Cards (只限定清單頁) ====== */
+#list.grid,
+.gallery.grid{
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap:20px;
+}
+@media(max-width:900px){
+  #list.grid, .gallery.grid{ grid-template-columns: repeat(2,1fr); }
+}
+@media(max-width:600px){
+  #list.grid, .gallery.grid{ grid-template-columns: 1fr; }
+}
 
 .card{ border:1px solid #eee; border-radius: var(--radius); overflow:hidden; background: var(--card); display:flex; flex-direction:column; }
 .card .thumb{ display:block; background:#f9f9f9; aspect-ratio:1/1; background-size:cover; background-position:center; }
@@ -50,20 +59,20 @@ img{ max-width: 100%; display: block; }
 /* ====== Empty ====== */
 .empty{ text-align:center; color:var(--muted); padding:40px 0; }
 
-/* ====== Header & Logo ====== */
+/* ====== Header, Logo, Search ====== */
 header{ position:sticky; top:0; z-index:10; backdrop-filter:saturate(180%) blur(10px); background:rgba(255,255,255,.85); border-bottom:1px solid #eee; }
 header .container.nav{ display:flex; align-items:center; justify-content:space-between; height:64px; }
 header .logo{ display:flex; align-items:center; gap:8px; font-weight:700; }
 
-/* Logo sizing: max height only, preserve aspect */
+/* Logo 最大高度限制 */
 header .logo img {
   max-height: 64px;
   height: auto;
   width: auto;
   object-fit: contain;
 }
-/* Header search bar restore */
-header .container.nav{ display:flex; align-items:center; justify-content:space-between; }
+
+/* 搜尋框樣式 */
 header .searchbar{
   margin-left:auto;
   display:flex;
