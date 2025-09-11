@@ -64,9 +64,9 @@ header{ position:sticky; top:0; z-index:10; backdrop-filter:saturate(180%) blur(
 header .container.nav{ display:flex; align-items:center; justify-content:space-between; height:64px; }
 header .logo{ display:flex; align-items:center; gap:8px; font-weight:700; }
 
-/* Logo 最大高度限制 */
+/* Logo 大小統一：清單頁與詳情頁相同 */
 header .logo img {
-  max-height: 64px;
+  max-height: 56px;
   height: auto;
   width: auto;
   object-fit: contain;
@@ -109,8 +109,4 @@ header .searchbar button:hover{ filter:brightness(1.05); }
   header .container.nav{ flex-wrap:wrap; height:auto; }
   header .searchbar{ order:2; width:100%; margin-top:8px; }
   header .searchbar input[type="search"]{ flex:1; min-width:0; }
-}
-/* 詳情頁 LOGO 縮小 */
-body.post header .logo img {
-  max-height: 38px;
 }
