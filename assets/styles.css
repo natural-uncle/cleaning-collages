@@ -160,3 +160,17 @@ img{ max-width: 100%; display: block; }
   #lb-prev{ left:24px !important; }
   #lb-next{ right:24px !important; }
 }
+
+
+/* --- Gallery 固定顯示 6 個，3x2 --- */
+.gallery.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap);
+}
+.gallery.grid > .card:nth-child(n+7) {
+  display: none;
+}
+.gallery.grid > .card {
+  aspect-ratio: 1 / 1;
+}
