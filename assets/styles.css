@@ -168,9 +168,25 @@ img{ max-width: 100%; display: block; }
   grid-template-columns: repeat(3, 1fr);
   gap: var(--gap);
 }
-.gallery.grid > .card:nth-child(n+7) {
-  display: none;
-}
+
 .gallery.grid > .card {
   aspect-ratio: 1 / 1;
+}
+
+
+/* --- 修正 Logo 大小 --- */
+header img, .logo img {
+  height: 40px !important;
+  max-height: 40px !important;
+  width: auto !important;
+  object-fit: contain !important;
+}
+
+
+/* --- 修正 LOGO 尺寸 --- */
+.logo img, header img {
+  height: 40px !important;
+  width: auto !important;
+  max-height: 40px !important;
+  object-fit: contain !important;
 }
